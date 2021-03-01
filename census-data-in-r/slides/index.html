@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Accessing and Analyzing US Census Data in R</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Kyle Walker" />
+    <meta name="date" content="2021-03-04" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Accessing and Analyzing US Census Data in R
+## An introduction to tidycensus
+### Kyle Walker
+### March 4, 2021
+
+---
+
+
+
+
+
+
+## About me
+
+* Associate Professor of Geography at TCU 
+
+* Spatial data science researcher and consultant
+
+* R package developer: tidycensus, tigris, mapboxapi
+
+* Book coming this year: _Analyzing the US Census with R_
+  - These workshops are a sneak preview of the book's content!
+
+---
+
+## SSDAN workshop series
+
+* Today: an introduction to analyzing US Census data with tidycensus
+
+* Next Thursday (March 11): spatial analysis and mapping in R
+
+* Thursday, March 25: working with US Census microdata (PUMS) with R and tidycensus
+
+---
+
+## Today's agenda
+
+* Hour 1: Getting started with tidycensus
+
+* Hour 2: Wrangling Census data with tidyverse tools
+
+* Hour 3: Visualizing US Census data
+
+---
+class: middle, center, inverse
+
+## Part 1: Getting started with tidycensus
+
+---
+
+## Typical Census data workflows
+
+&lt;img src=img/spreadsheet.png style="width: 900px"&gt;
+
+---
+
+## The Census API
+
+* [The US Census __A__pplication __P__rogramming __Interface__ (API)](https://www.census.gov/data/developers/data-sets.html) allows developers to access Census data resources programmatically
+
+* R packages to interact with the APIs: censusapi, acs
+
+* Other languages: cenpy (Python), citySDK (JavaScript)
+
+---
+
+## tidycensus
+
+* R interface to the Decennial Census, American Community Survey, Population Estimates Program, and Public Use Microdata Series APIs
+
+* Key features: 
+  - Wrangles Census data internally to return tidyverse-ready format (or traditional wide format if requested);
+  
+  - Automatically downloads and merges Census geometries to data and returns simple features objects (next week's workshop!); 
+  
+  - Includes tools for handling margins of error in the ACS and working with survey weights in the ACS PUMS;
+  
+  - States and counties can be requested by name (no more looking up FIPS codes!)
+  
+---
+
+## Development of tidycensus
+
+* Mid-2010s: I started accumulating R scripts that did the same thing over and over (download Census data from the API, transform to tidy format, join to spatial data)
+
+* (Very) early implementation: [acs14lite](https://rpubs.com/walkerke/acs14lite)
+
+* 2017: first release of tidycensus following the implementation of a "tidy spatial data model" in the sf package
+
+* 2020: Matt Herman joins as co-author; support for ACS microdata (PUMS) in tidycensus
+
+---
+
+## Getting started with tidycensus
+
+* To get started, install the packages you'll need for today's workshop
+
+* If you are using the RStudio Cloud environment, these packages are already installed for you
+
+
+```r
+install.packages(c("tidycensus", "tidyverse", "plotly"))
+```
+
+---
+
+## Your Census API key
+
+* To use tidycensus, you will need a Census API key.  Visit https://api.census.gov/data/key_signup.html to request a key, then activate the key from the link in your email.  
+
+* Once activated, use the `census_api_key()` function to set your key as an environment variable
+
+
+```r
+library(tidycensus)
+
+census_api_key("YOUR KEY GOES HERE", install = TRUE)
+```
+
+---
+class: middle, center, inverse
+
+## Basic usage of tidycensus
+
+---
+
+## tidycensus: the basics
+
+* The two main functions in tidycensus are `get_decennial()` for the 2000 and 2010 decennial Censuses and `get_acs()` for the American Community Survey
+
+* The two required arguments are `geography` and `variables` for the functions to work; the default `year` in `get_decennial()` is `2010`
+
+
+```r
+pop10 &lt;- get_decennial(
+  geography = "state",
+  variables = "P001001"
+)
+```
+
+---
+
+* Decennial Census data are returned with four columns: `GEOID`, `NAME`, `variable`, and `value`
+
+
+```r
+pop10
+```
+
+```
+## # A tibble: 52 x 4
+##    GEOID NAME        variable    value
+##    &lt;chr&gt; &lt;chr&gt;       &lt;chr&gt;       &lt;dbl&gt;
+##  1 01    Alabama     P001001   4779736
+##  2 02    Alaska      P001001    710231
+##  3 04    Arizona     P001001   6392017
+##  4 05    Arkansas    P001001   2915918
+##  5 06    California  P001001  37253956
+##  6 22    Louisiana   P001001   4533372
+##  7 21    Kentucky    P001001   4339367
+##  8 08    Colorado    P001001   5029196
+##  9 09    Connecticut P001001   3574097
+## 10 10    Delaware    P001001    897934
+## # … with 42 more rows
+```
+
+---
+
+## The American Community Survey
+
+* The American Community Survey (ACS) is an annual survey of approximately 3 million households, and asks more detailed questions than the decennial Census
+
+* The default dataset in `get_acs()` is the 2015-2019 5-year dataset; the 1-year dataset is also available for geographies of population 65,000 and greater
+
+
+```r
+income_15to19 &lt;- get_acs(
+  geography = "state",
+  variables = "B19013_001"
+)
+```
+
+---
+
+* The output of `get_acs()` includes the `GEOID`, `NAME`, and `variable` columns along with the ACS `estimate` and `moe`, which is the margin of error around that estimate at a 90 percent confidence level
+
+
+```r
+income_15to19
+```
+
+```
+## # A tibble: 52 x 5
+##    GEOID NAME                 variable   estimate   moe
+##    &lt;chr&gt; &lt;chr&gt;                &lt;chr&gt;         &lt;dbl&gt; &lt;dbl&gt;
+##  1 01    Alabama              B19013_001    50536   304
+##  2 02    Alaska               B19013_001    77640  1015
+##  3 04    Arizona              B19013_001    58945   266
+##  4 05    Arkansas             B19013_001    47597   328
+##  5 06    California           B19013_001    75235   232
+##  6 08    Colorado             B19013_001    72331   370
+##  7 09    Connecticut          B19013_001    78444   553
+##  8 10    Delaware             B19013_001    68287   696
+##  9 11    District of Columbia B19013_001    86420  1008
+## 10 12    Florida              B19013_001    55660   220
+## # … with 42 more rows
+```
+
+---
+
+* One-year ACS data can be requested with the argument `survey = "acs1"`
+
+
+```r
+income_19 &lt;- get_acs(
+  geography = "state",
+  variables = "B19013_001",
+  survey = "acs1"
+)
+
+income_19
+```
+
+```
+## # A tibble: 52 x 5
+##    GEOID NAME                 variable   estimate   moe
+##    &lt;chr&gt; &lt;chr&gt;                &lt;chr&gt;         &lt;dbl&gt; &lt;dbl&gt;
+##  1 01    Alabama              B19013_001    51734   600
+##  2 02    Alaska               B19013_001    75463  2694
+##  3 04    Arizona              B19013_001    62055   446
+##  4 05    Arkansas             B19013_001    48952   863
+##  5 06    California           B19013_001    80440   313
+##  6 08    Colorado             B19013_001    77127   791
+##  7 09    Connecticut          B19013_001    78833  1358
+##  8 10    Delaware             B19013_001    70176  1623
+##  9 11    District of Columbia B19013_001    92266  2497
+## 10 12    Florida              B19013_001    59227   443
+## # … with 42 more rows
+```
+---
+
+## Requesting tables of variables
+
+* The `table` parameter can be used to obtain all related variables in a "table" at once
+
+
+```r
+age_table &lt;- get_acs(
+  geography = "state", 
+  table = "B01001"
+)
+```
+
+---
+
+
+```r
+age_table
+```
+
+```
+## # A tibble: 2,548 x 5
+##    GEOID NAME    variable   estimate   moe
+##    &lt;chr&gt; &lt;chr&gt;   &lt;chr&gt;         &lt;dbl&gt; &lt;dbl&gt;
+##  1 01    Alabama B01001_001  4876250    NA
+##  2 01    Alabama B01001_002  2359355  1270
+##  3 01    Alabama B01001_003   149090   704
+##  4 01    Alabama B01001_004   153494  2290
+##  5 01    Alabama B01001_005   158617  2274
+##  6 01    Alabama B01001_006    98257   468
+##  7 01    Alabama B01001_007    64980   834
+##  8 01    Alabama B01001_008    35870  1436
+##  9 01    Alabama B01001_009    35040  1472
+## 10 01    Alabama B01001_010    95065  1916
+## # … with 2,538 more rows
+```
+
+---
+class: middle, center, inverse
+
+## Understanding geography and variables in tidycensus
+
+---
+
+## US Census Geography
+
+&lt;img src=img/census_diagram.png style="width: 500px"&gt;
+
+.footnote[Source: [US Census Bureau](https://www2.census.gov/geo/pdfs/reference/geodiagram.pdf)]
+
+---
+
+## Geography in tidycensus
+
+* Information on available geographies, and how to specify them, can be found [in the tidycensus documentation](https://walker-data.com/tidycensus/articles/basic-usage.html#geography-in-tidycensus-1)
+
+&lt;img src=img/tidycensus_geographies.png style="width: 650px"&gt;
+
+
+---
+
+## Querying by state
+
+
+```r
+wi_income &lt;- get_acs(
+  geography = "county", 
+  variables = "B19013_001", 
+  state = "WI",
+  year = 2019
+)
+
+wi_income
+```
+
+```
+## # A tibble: 72 x 5
+##    GEOID NAME                       variable   estimate   moe
+##    &lt;chr&gt; &lt;chr&gt;                      &lt;chr&gt;         &lt;dbl&gt; &lt;dbl&gt;
+##  1 55001 Adams County, Wisconsin    B19013_001    46369  1834
+##  2 55003 Ashland County, Wisconsin  B19013_001    42510  2858
+##  3 55005 Barron County, Wisconsin   B19013_001    52703  2104
+##  4 55007 Bayfield County, Wisconsin B19013_001    56096  1877
+##  5 55009 Brown County, Wisconsin    B19013_001    62340  1112
+##  6 55011 Buffalo County, Wisconsin  B19013_001    57829  1873
+##  7 55013 Burnett County, Wisconsin  B19013_001    52672  1388
+##  8 55015 Calumet County, Wisconsin  B19013_001    75814  2425
+##  9 55017 Chippewa County, Wisconsin B19013_001    59742  1759
+## 10 55019 Clark County, Wisconsin    B19013_001    54012  1223
+## # … with 62 more rows
+```
+
+---
+
+## Querying by state and county
+
+
+```r
+dane_income &lt;- get_acs(
+  geography = "tract", 
+  variables = "B19013_001", 
+  state = "WI", 
+  county = "Dane"
+)
+
+dane_income
+```
+
+```
+## # A tibble: 107 x 5
+##    GEOID       NAME                                     variable  estimate   moe
+##    &lt;chr&gt;       &lt;chr&gt;                                    &lt;chr&gt;        &lt;dbl&gt; &lt;dbl&gt;
+##  1 55025000100 Census Tract 1, Dane County, Wisconsin   B19013_0…    72471 12984
+##  2 55025000201 Census Tract 2.01, Dane County, Wiscons… B19013_0…    94821 11860
+##  3 55025000202 Census Tract 2.02, Dane County, Wiscons… B19013_0…    84145  7021
+##  4 55025000204 Census Tract 2.04, Dane County, Wiscons… B19013_0…    79617 11823
+##  5 55025000205 Census Tract 2.05, Dane County, Wiscons… B19013_0…    91326 13453
+##  6 55025000300 Census Tract 3, Dane County, Wisconsin   B19013_0…    53778  7593
+##  7 55025000401 Census Tract 4.01, Dane County, Wiscons… B19013_0…    98178  7330
+##  8 55025000402 Census Tract 4.02, Dane County, Wiscons… B19013_0…   107440  6585
+##  9 55025000405 Census Tract 4.05, Dane County, Wiscons… B19013_0…    68911  4141
+## 10 55025000406 Census Tract 4.06, Dane County, Wiscons… B19013_0…    74489 10451
+## # … with 97 more rows
+```
+---
+
+## Searching for variables
+
+* To search for variables, use the `load_variables()` function along with a year and dataset
+
+* The `View()` function in RStudio allows for interactive browsing and filtering
+
+
+```r
+vars &lt;- load_variables(2019, "acs5")
+
+View(vars)
+```
+
+---
+
+&lt;img src="https://walker-data.com/tidycensus/articles/img/view.png" style = "width: 800px"&gt;
+
+---
+class: middle, center, inverse
+
+## Data structure in tidycensus
+
+---
+
+## "Tidy" or long-form data
+
+
+```r
+hhinc &lt;- get_acs(
+  geography = "state", 
+  table = "B19001", 
+  survey = "acs1"
+)
+
+hhinc
+```
+
+```
+## # A tibble: 884 x 5
+##    GEOID NAME    variable   estimate   moe
+##    &lt;chr&gt; &lt;chr&gt;   &lt;chr&gt;         &lt;dbl&gt; &lt;dbl&gt;
+##  1 01    Alabama B19001_001  1897576 10370
+##  2 01    Alabama B19001_002   154558  5883
+##  3 01    Alabama B19001_003   103653  6001
+##  4 01    Alabama B19001_004   108500  5926
+##  5 01    Alabama B19001_005    98706  6491
+##  6 01    Alabama B19001_006    90916  5859
+##  7 01    Alabama B19001_007   105146  4149
+##  8 01    Alabama B19001_008    85014  5417
+##  9 01    Alabama B19001_009    87118  5163
+## 10 01    Alabama B19001_010    82323  4231
+## # … with 874 more rows
+```
+
+---
+
+## "Wide" data 
+
+
+```r
+hhinc_wide &lt;- get_acs(
+  geography = "state", 
+  table = "B19001", 
+  survey = "acs1", 
+  output = "wide"
+)
+
+hhinc_wide
+```
+
+```
+## # A tibble: 52 x 36
+##    GEOID NAME  B19001_001E B19001_001M B19001_002E B19001_002M B19001_003E
+##    &lt;chr&gt; &lt;chr&gt;       &lt;dbl&gt;       &lt;dbl&gt;       &lt;dbl&gt;       &lt;dbl&gt;       &lt;dbl&gt;
+##  1 17    Illi…     4866006       12627      289515        9500      178230
+##  2 13    Geor…     3852714       14425      237054        8319      163741
+##  3 16    Idaho      655859        5316       27773        3127       24498
+##  4 15    Hawa…      465299        5012       23344        2470       12238
+##  5 18    Indi…     2597765       12716      153355        7188      104333
+##  6 19    Iowa      1287221        6606       65503        3958       52788
+##  7 20    Kans…     1138329        6595       57967        4269       49134
+##  8 21    Kent…     1748732        8789      137394        7450       96775
+##  9 22    Loui…     1741076       11011      175845        7581       98971
+## 10 23    Maine      573618        4999       29156        2776       26772
+## # … with 42 more rows, and 29 more variables: B19001_003M &lt;dbl&gt;,
+## #   B19001_004E &lt;dbl&gt;, B19001_004M &lt;dbl&gt;, B19001_005E &lt;dbl&gt;, B19001_005M &lt;dbl&gt;,
+## #   B19001_006E &lt;dbl&gt;, B19001_006M &lt;dbl&gt;, B19001_007E &lt;dbl&gt;, B19001_007M &lt;dbl&gt;,
+## #   B19001_008E &lt;dbl&gt;, B19001_008M &lt;dbl&gt;, B19001_009E &lt;dbl&gt;, B19001_009M &lt;dbl&gt;,
+## #   B19001_010E &lt;dbl&gt;, B19001_010M &lt;dbl&gt;, B19001_011E &lt;dbl&gt;, B19001_011M &lt;dbl&gt;,
+## #   B19001_012E &lt;dbl&gt;, B19001_012M &lt;dbl&gt;, B19001_013E &lt;dbl&gt;, B19001_013M &lt;dbl&gt;,
+## #   B19001_014E &lt;dbl&gt;, B19001_014M &lt;dbl&gt;, B19001_015E &lt;dbl&gt;, B19001_015M &lt;dbl&gt;,
+## #   B19001_016E &lt;dbl&gt;, B19001_016M &lt;dbl&gt;, B19001_017E &lt;dbl&gt;, B19001_017M &lt;dbl&gt;
+```
+
+---
+
+## Using named vectors of variables
+
+
+```r
+ga_wide &lt;- get_acs(
+  geography = "county",
+  state = "GA",
+  variables = c(medinc = "B19013_001",
+                medage = "B01002_001"),
+  output = "wide"
+)
+
+ga_wide
+```
+
+```
+## # A tibble: 159 x 6
+##    GEOID NAME                          medincE medincM medageE medageM
+##    &lt;chr&gt; &lt;chr&gt;                           &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
+##  1 13005 Bacon County, Georgia           37519    5492    36.7     0.7
+##  2 13025 Brantley County, Georgia        38857    3480    41.1     0.8
+##  3 13017 Ben Hill County, Georgia        32229    3845    39.9     1.1
+##  4 13033 Burke County, Georgia           44151    2438    37.4     0.6
+##  5 13047 Catoosa County, Georgia         56235    2290    40.4     0.4
+##  6 13053 Chattahoochee County, Georgia   47096    5158    24.5     0.5
+##  7 13055 Chattooga County, Georgia       36807    2268    39.4     0.7
+##  8 13073 Columbia County, Georgia        82339    3532    36.9     0.4
+##  9 13087 Decatur County, Georgia         41481    3584    37.8     0.6
+## 10 13115 Floyd County, Georgia           48336    2266    38.3     0.3
+## # … with 149 more rows
+```
+
+---
+
+## Part 1 exercises
+
+1. Review the available geographies in tidycensus from the tidycensus documentation.  Acquire data on median age (variable B01002_001) for a geography we have not yet used.  
+
+2. Use the `load_variables()` function to find a variable that interests you that we haven't used yet.  Use `get_acs()` to fetch data from the 2015-2019 ACS for counties in the state where you live.  
+
+---
+class: middle, center, inverse
+
+## Part 2: Wrangling Census data with tidyverse tools
+
+---
+
+## The tidyverse
+
+
+```r
+library(tidyverse)
+
+tidyverse_logo()
+```
+
+```
+## ⬢ __  _    __   .    ⬡           ⬢  . 
+##  / /_(_)__/ /_ ___  _____ _______ ___ 
+## / __/ / _  / // / |/ / -_) __(_-&lt;/ -_)
+## \__/_/\_,_/\_, /|___/\__/_/ /___/\__/ 
+##      ⬢  . /___/      ⬡      .       ⬢
+```
+
+* The [tidyverse](https://tidyverse.tidyverse.org/index.html): an integrated set of packages developed primarily by Hadley Wickham and the RStudio team
+
+---
+
+## tidycensus and the tidyverse
+
+* Census data are commonly used in _wide_ format, with categories spread across the columns
+
+* tidyverse tools work better with [data that are in "tidy", or _long_ format](https://vita.had.co.nz/papers/tidy-data.pdf); this format is returned by tidycensus by default
+
+* Goal: return data "ready to go" for use with tidyverse tools
+
+---
+class: middle, center, inverse
+
+## Exploring Census data with tidyverse tools
+
+---
+
+## Finding the largest values
+
+* dplyr's `arrange()` function sorts data based on values in one or more columns, and `filter()` helps you query data based on column values
+
+* Example: what are the youngest and oldest counties in the United States by median age?
+
+
+```r
+library(tidycensus)
+library(tidyverse)
+
+median_age &lt;- get_acs(
+  geography = "county",
+  variables = "B01002_001"
+)
+```
+
+---
+
+
+```r
+arrange(median_age, estimate)
+```
+
+```
+## # A tibble: 3,220 x 5
+##    GEOID NAME                          variable   estimate   moe
+##    &lt;chr&gt; &lt;chr&gt;                         &lt;chr&gt;         &lt;dbl&gt; &lt;dbl&gt;
+##  1 51678 Lexington city, Virginia      B01002_001     22.3   0.7
+##  2 51750 Radford city, Virginia        B01002_001     23.4   0.5
+##  3 16065 Madison County, Idaho         B01002_001     23.5   0.2
+##  4 46121 Todd County, South Dakota     B01002_001     23.8   0.4
+##  5 02158 Kusilvak Census Area, Alaska  B01002_001     24.1   0.2
+##  6 13053 Chattahoochee County, Georgia B01002_001     24.5   0.5
+##  7 53075 Whitman County, Washington    B01002_001     24.7   0.3
+##  8 49049 Utah County, Utah             B01002_001     24.8   0.1
+##  9 46027 Clay County, South Dakota     B01002_001     24.9   0.4
+## 10 51830 Williamsburg city, Virginia   B01002_001     24.9   0.7
+## # … with 3,210 more rows
+```
+
+---
+
+
+```r
+arrange(median_age, desc(estimate))
+```
+
+```
+## # A tibble: 3,220 x 5
+##    GEOID NAME                            variable   estimate   moe
+##    &lt;chr&gt; &lt;chr&gt;                           &lt;chr&gt;         &lt;dbl&gt; &lt;dbl&gt;
+##  1 12119 Sumter County, Florida          B01002_001     67.4   0.2
+##  2 51091 Highland County, Virginia       B01002_001     60.9   3.5
+##  3 08027 Custer County, Colorado         B01002_001     59.7   2.6
+##  4 12015 Charlotte County, Florida       B01002_001     59.1   0.2
+##  5 41069 Wheeler County, Oregon          B01002_001     59     3.3
+##  6 51133 Northumberland County, Virginia B01002_001     58.9   0.7
+##  7 26131 Ontonagon County, Michigan      B01002_001     58.6   0.4
+##  8 35021 Harding County, New Mexico      B01002_001     58.5   5.5
+##  9 53031 Jefferson County, Washington    B01002_001     58.3   0.7
+## 10 26001 Alcona County, Michigan         B01002_001     58.2   0.3
+## # … with 3,210 more rows
+```
+
+---
+
+## What are the counties with a median age above 50?
+
+
+```r
+above50 &lt;- filter(median_age, estimate &gt;= 50)
+
+above50
+```
+
+```
+## # A tibble: 216 x 5
+##    GEOID NAME                        variable   estimate   moe
+##    &lt;chr&gt; &lt;chr&gt;                       &lt;chr&gt;         &lt;dbl&gt; &lt;dbl&gt;
+##  1 04007 Gila County, Arizona        B01002_001     50.2   0.2
+##  2 04012 La Paz County, Arizona      B01002_001     56.5   0.5
+##  3 04015 Mohave County, Arizona      B01002_001     51.6   0.3
+##  4 04025 Yavapai County, Arizona     B01002_001     53.4   0.1
+##  5 05005 Baxter County, Arkansas     B01002_001     52.2   0.3
+##  6 05089 Marion County, Arkansas     B01002_001     52.2   0.5
+##  7 05097 Montgomery County, Arkansas B01002_001     50.4   0.8
+##  8 05137 Stone County, Arkansas      B01002_001     50.1   0.7
+##  9 06003 Alpine County, California   B01002_001     52.2   8.8
+## 10 06005 Amador County, California   B01002_001     50.5   0.4
+## # … with 206 more rows
+```
+---
+
+## Using summary variables
+
+* Many decennial Census and ACS variables are organized in tables in which the first variable represents a _summary variable_, or denominator for the others
+
+* The parameter `summary_var` can be used to generate a new column in long-form data for a requested denominator, which works well for normalizing estimates
+
+---
+
+## Using summary variables
+
+
+```r
+race_vars &lt;- c(
+  White = "B03002_003",
+  Black = "B03002_004",
+  Native = "B03002_005",
+  Asian = "B03002_006",
+  HIPI = "B03002_007",
+  Hispanic = "B03002_012"
+)
+
+az_race &lt;- get_acs(
+  geography = "county",
+  state = "AZ",
+  variables = race_vars,
+  summary_var = "B03002_001"
+)
+```
+
+---
+
+
+```r
+az_race
+```
+
+```
+## # A tibble: 90 x 7
+##    GEOID NAME                    variable estimate   moe summary_est summary_moe
+##    &lt;chr&gt; &lt;chr&gt;                   &lt;chr&gt;       &lt;dbl&gt; &lt;dbl&gt;       &lt;dbl&gt;       &lt;dbl&gt;
+##  1 04001 Apache County, Arizona  White       13022     4       71511          NA
+##  2 04001 Apache County, Arizona  Black         373   138       71511          NA
+##  3 04001 Apache County, Arizona  Native      52285   234       71511          NA
+##  4 04001 Apache County, Arizona  Asian         246    78       71511          NA
+##  5 04001 Apache County, Arizona  HIPI           16    16       71511          NA
+##  6 04001 Apache County, Arizona  Hispanic     4531    NA       71511          NA
+##  7 04003 Cochise County, Arizona White       69216   235      125867          NA
+##  8 04003 Cochise County, Arizona Black        4620   247      125867          NA
+##  9 04003 Cochise County, Arizona Native       1142   191      125867          NA
+## 10 04003 Cochise County, Arizona Asian        2431   162      125867          NA
+## # … with 80 more rows
+```
+
+---
+
+## Normalizing columns with `mutate()`
+
+* dplyr's `mutate()` function is used to calculate new columns in your data; the `select()` column can keep or drop columns by name
+
+* In a tidyverse workflow, these steps are commonly linked using the pipe operator (`%&gt;%`) from the magrittr package
+
+
+```r
+az_race_percent &lt;- az_race %&gt;%
+  mutate(percent = 100 * (estimate / summary_est)) %&gt;%
+  select(NAME, variable, percent)
+```
+
+
+---
+
+
+```r
+az_race_percent
+```
+
+```
+## # A tibble: 90 x 3
+##    NAME                    variable percent
+##    &lt;chr&gt;                   &lt;chr&gt;      &lt;dbl&gt;
+##  1 Apache County, Arizona  White    18.2   
+##  2 Apache County, Arizona  Black     0.522 
+##  3 Apache County, Arizona  Native   73.1   
+##  4 Apache County, Arizona  Asian     0.344 
+##  5 Apache County, Arizona  HIPI      0.0224
+##  6 Apache County, Arizona  Hispanic  6.34  
+##  7 Cochise County, Arizona White    55.0   
+##  8 Cochise County, Arizona Black     3.67  
+##  9 Cochise County, Arizona Native    0.907 
+## 10 Cochise County, Arizona Asian     1.93  
+## # … with 80 more rows
+```
+
+---
+class: middle, center, inverse
+
+## Group-wise Census data analysis
+
+---
+
+## Group-wise Census data analysis
+
+* The `group_by()` and `summarize()` functions in dplyr are used to implement the split-apply-combine method of data analysis
+
+* The default "tidy" format returned by tidycensus is designed to work well with group-wise Census data analysis workflows
+
+---
+
+## What is the largest group by county?
+
+
+```r
+largest_group &lt;- az_race_percent %&gt;%
+  group_by(NAME) %&gt;%
+  filter(percent == max(percent))
+```
+
+---
+
+
+```r
+largest_group
+```
+
+```
+## # A tibble: 15 x 3
+## # Groups:   NAME [15]
+##    NAME                       variable percent
+##    &lt;chr&gt;                      &lt;chr&gt;      &lt;dbl&gt;
+##  1 Apache County, Arizona     Native      73.1
+##  2 Cochise County, Arizona    White       55.0
+##  3 Coconino County, Arizona   White       54.1
+##  4 Gila County, Arizona       White       62.3
+##  5 Graham County, Arizona     White       50.9
+##  6 Greenlee County, Arizona   Hispanic    46.8
+##  7 La Paz County, Arizona     White       57.4
+##  8 Maricopa County, Arizona   White       55.2
+##  9 Mohave County, Arizona     White       77.3
+## 10 Navajo County, Arizona     Native      43.5
+## 11 Pima County, Arizona       White       51.7
+## 12 Pinal County, Arizona      White       56.8
+## 13 Santa Cruz County, Arizona Hispanic    83.5
+## 14 Yavapai County, Arizona    White       80.5
+## 15 Yuma County, Arizona       Hispanic    63.8
+```
+
+---
+
+## What are the median percentages by group?
+
+
+```r
+az_race_percent %&gt;%
+  group_by(variable) %&gt;%
+  summarize(median_pct = median(percent))
+```
+
+```
+## # A tibble: 6 x 2
+##   variable median_pct
+## * &lt;chr&gt;         &lt;dbl&gt;
+## 1 Asian         0.924
+## 2 Black         1.12 
+## 3 HIPI          0.121
+## 4 Hispanic     30.2  
+## 5 Native        3.58 
+## 6 White        54.1
+```
+
+---
+class: middle, center, inverse
+
+## Working with margins of error in tidycensus
+
+---
+
+## Margins of error in the ACS
+
+* As the American Community Survey is a _survey_, its estimates are subject to a _margin of error_, or MOE
+
+* By default, MOEs are returned at a 90 percent confidence level; e.g., "we are 90 percent sure that the true value falls within a range defined by the estimate plus or minus the margin of error"
+
+---
+
+## Margins of error in tidycensus
+
+* tidycensus always returns the margin of error for ACS estimates when applicable.  
+
+* By default, margins of error are contained in the `moe` column; in wide-form data, MOEs are found in columns that end with `M`
+
+* The `moe_level` parameter controls the confidence level of the MOE; choose `90` (the default), `95`, or `99`
+
+---
+
+## Example: population over age 65 by sex
+
+
+```r
+vars &lt;- paste0("B01001_0", c(20:25, 44:49))
+
+salt_lake &lt;- get_acs(
+  geography = "tract",
+  variables = vars,
+  state = "Utah",
+  county = "Salt Lake",
+  year = 2019
+)
+
+example_tract &lt;- salt_lake %&gt;%
+  filter(GEOID == "49035100100")
+```
+
+---
+
+
+```r
+example_tract %&gt;% select(-NAME)
+```
+
+```
+## # A tibble: 12 x 4
+##    GEOID       variable   estimate   moe
+##    &lt;chr&gt;       &lt;chr&gt;         &lt;dbl&gt; &lt;dbl&gt;
+##  1 49035100100 B01001_020       12    13
+##  2 49035100100 B01001_021       36    23
+##  3 49035100100 B01001_022        8    11
+##  4 49035100100 B01001_023        5     8
+##  5 49035100100 B01001_024        0    11
+##  6 49035100100 B01001_025       22    23
+##  7 49035100100 B01001_044        0    11
+##  8 49035100100 B01001_045       11    13
+##  9 49035100100 B01001_046       27    20
+## 10 49035100100 B01001_047       10    12
+## 11 49035100100 B01001_048        7    11
+## 12 49035100100 B01001_049        0    11
+```
+---
+
+## Margin of error functions in tidycensus
+
+* tidycensus includes helper functions for calculating derives margins of error based on Census-supplied formulas.  These functions include `moe_sum()`, `moe_product()`, `moe_ratio()`, and `moe_prop()`
+
+Example: 
+
+
+```r
+moe_prop(25, 100, 5, 3)
+```
+
+```
+## [1] 0.0494343
+```
+
+---
+
+## Calculating group-wise margins of error
+
+
+```r
+salt_lake_grouped &lt;- salt_lake %&gt;%
+  mutate(sex = if_else(str_sub(variable, start = -2) &lt; "26",
+                       "Male", 
+                       "Female")) %&gt;%
+  group_by(GEOID, sex) %&gt;%
+  summarize(sum_est = sum(estimate), 
+            sum_moe = moe_sum(moe, estimate))
+```
+
+---
+
+
+```r
+salt_lake_grouped
+```
+
+```
+## # A tibble: 424 x 4
+## # Groups:   GEOID [212]
+##    GEOID       sex    sum_est sum_moe
+##    &lt;chr&gt;       &lt;chr&gt;    &lt;dbl&gt;   &lt;dbl&gt;
+##  1 49035100100 Female      55    30.9
+##  2 49035100100 Male        83    39.2
+##  3 49035100200 Female     167    57.5
+##  4 49035100200 Male       153    50.9
+##  5 49035100306 Female     273   109. 
+##  6 49035100306 Male       225    90.3
+##  7 49035100307 Female     188    70.2
+##  8 49035100307 Male       117    64.5
+##  9 49035100308 Female     164    98.7
+## 10 49035100308 Male       129    77.9
+## # … with 414 more rows
+```
+
+---
+
+## Part 2 exercises
+
+* The ACS Data Profile includes a number of pre-computed percentages which can reduce your data wrangling time.  The variable in the 2015-2019 ACS for "percent of the population age 25 and up with a bachelor's degree" is `DP02_0068P`.  For a state of your choosing, use this variable to determine: 
+  - The county with the highest percentage in the state;
+  
+  - The county with the lowest percentage in the state;
+  
+  - The median value for counties in your chosen state
+
+---
+class: middle, center, inverse
+
+## Part 3: Visualizing US Census data
+
+---
+
+## Visualizing US Census data
+
+* tidycensus is designed with ggplot2-based visualization in mind, the core framework for data visualization in the tidyverse
+
+* ggplot2 along with its extensions can be used for everything from simple graphics to complex interactive plots
+
+---
+
+## Comparing ACS estimates
+
+* Example: the percentage of commuters taking public transit to work in the 20 most populous US metropolitan areas (CBSAs)
+
+
+```r
+library(tidycensus)
+library(tidyverse)
+
+metros &lt;-
+  get_acs(
+    geography = "cbsa",
+    variables = "DP03_0021P",
+    summary_var = "B01003_001",
+    survey = "acs1"
+  ) %&gt;%
+  filter(min_rank(desc(summary_est)) &lt; 21)
+```
+
+---
+
+
+```r
+glimpse(metros)
+```
+
+```
+## Rows: 20
+## Columns: 7
+## $ GEOID       &lt;chr&gt; "12060", "14460", "16980", "19100", "19740", "19820", "26…
+## $ NAME        &lt;chr&gt; "Atlanta-Sandy Springs-Alpharetta, GA Metro Area", "Bosto…
+## $ variable    &lt;chr&gt; "DP03_0021P", "DP03_0021P", "DP03_0021P", "DP03_0021P", "…
+## $ estimate    &lt;dbl&gt; 2.8, 13.4, 12.4, 1.3, 4.5, 1.4, 2.0, 4.8, 2.9, 4.5, 31.6,…
+## $ moe         &lt;dbl&gt; 0.2, 0.4, 0.3, 0.1, 0.3, 0.2, 0.2, 0.1, 0.2, 0.2, 0.2, 0.…
+## $ summary_est &lt;dbl&gt; 6018744, 4873019, 9457867, 7573136, 2967239, 4319629, 706…
+## $ summary_moe &lt;dbl&gt; 3340, NA, 1469, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, N…
+```
+---
+
+## Exploring data with visualization
+
+
+```r
+p &lt;- ggplot(metros, aes(x = NAME, y = estimate)) + 
+  geom_col()
+
+p
+```
+
+---
+
+&lt;img src="img/metros_step1.png" style="width: 800px"&gt;
+
+---
+
+## Improving your plot
+
+
+```r
+p &lt;- metros %&gt;%
+  mutate(NAME = str_remove(NAME, "-.*$")) %&gt;%
+  mutate(NAME = str_remove(NAME, ",.*$")) %&gt;%
+  ggplot(aes(y = reorder(NAME, estimate), x = estimate)) + 
+  geom_col()
+
+
+p
+```
+
+---
+
+&lt;img src="img/metros_step2.png" style="width: 800px"&gt;
+
+---
+
+## Improving your plot
+
+
+```r
+p &lt;- p +  
+  theme_minimal() + 
+  labs(title = "Percentage of commuters who take public transportation to work", 
+       subtitle = "2019 1-year ACS estimates for the 20 largest US metropolitan areas", 
+       y = "", 
+       x = "ACS estimate (percent)", 
+       caption = "Source: ACS Data Profile variable DP03_0021P via the tidycensus R package")
+  
+
+p
+```
+
+
+---
+
+&lt;img src="img/metros_step3.png" style="width: 800px"&gt;
+
+---
+class: middle, center, inverse
+
+## Visualizing margins of error in the ACS
+
+---
+
+## Comparing estimates across groups
+
+* Given variable population sizes of enumeration units like counties, margins of error around estimates can vary significantly
+
+* Example: median household income for counties in Maine
+
+
+```r
+maine_income &lt;- get_acs(
+  state = "Maine",
+  geography = "county",
+  variables = c(hhincome = "B19013_001")
+) %&gt;%
+  mutate(NAME = str_remove(NAME, " County, Maine"))
+```
+
+---
+
+
+```r
+maine_income %&gt;% arrange(desc(moe))
+```
+
+```
+## # A tibble: 16 x 5
+##    GEOID NAME         variable estimate   moe
+##    &lt;chr&gt; &lt;chr&gt;        &lt;chr&gt;       &lt;dbl&gt; &lt;dbl&gt;
+##  1 23015 Lincoln      hhincome    57720  3240
+##  2 23007 Franklin     hhincome    51422  2966
+##  3 23013 Knox         hhincome    57751  2820
+##  4 23021 Piscataquis  hhincome    40890  2613
+##  5 23025 Somerset     hhincome    44256  2591
+##  6 23023 Sagadahoc    hhincome    63694  2309
+##  7 23027 Waldo        hhincome    51931  2170
+##  8 23009 Hancock      hhincome    57178  2057
+##  9 23011 Kennebec     hhincome    55365  1948
+## 10 23017 Oxford       hhincome    49204  1879
+## 11 23001 Androscoggin hhincome    53509  1770
+## 12 23029 Washington   hhincome    41347  1565
+## 13 23031 York         hhincome    67830  1450
+## 14 23005 Cumberland   hhincome    73072  1427
+## 15 23003 Aroostook    hhincome    41123  1381
+## 16 23019 Penobscot    hhincome    50808  1326
+```
+
+---
+
+## Visualizing margins of error
+
+
+```r
+ggplot(maine_income, aes(x = estimate, y = reorder(NAME, estimate))) + 
+  geom_errorbarh(aes(xmin = estimate - moe, xmax = estimate + moe)) + 
+  geom_point(size = 3, color = "darkgreen") + 
+  labs(title = "Median household income", 
+       subtitle = "Counties in Maine", 
+       x = "2015-2019 ACS estimate", 
+       y = "") + 
+  scale_x_continuous(labels = scales::dollar)
+```
+
+---
+
+&lt;img src=img/maine_income.png style="width: 800px"&gt;
+
+---
+class: middle, center, inverse
+
+## Age and sex structure with population pyramids
+
+---
+
+## Population Estimates Program (PEP) in tidycensus
+
+* The `get_estimates()` function fetches data from the [Population Estimates Program (PEP) APIs](https://www.census.gov/data/developers/data-sets/popest-popproj/popest.html)
+
+* Data are organized by `product` which include `"population"`, `"components"` (births/deaths/migration), `"housing"`, and `"characteristics"`
+
+---
+
+## Getting age &amp; sex estimates
+
+
+```r
+utah &lt;- get_estimates(
+  geography = "state",
+  state = "UT",
+  product = "characteristics",
+  breakdown = c("SEX", "AGEGROUP"),
+  breakdown_labels = TRUE,
+  year = 2019
+) 
+
+utah
+```
+
+```
+## # A tibble: 96 x 5
+##    GEOID NAME    value SEX        AGEGROUP          
+##    &lt;chr&gt; &lt;chr&gt;   &lt;dbl&gt; &lt;chr&gt;      &lt;fct&gt;             
+##  1 49    Utah  3205958 Both sexes All ages          
+##  2 49    Utah   247803 Both sexes Age 0 to 4 years  
+##  3 49    Utah   258976 Both sexes Age 5 to 9 years  
+##  4 49    Utah   267985 Both sexes Age 10 to 14 years
+##  5 49    Utah   253847 Both sexes Age 15 to 19 years
+##  6 49    Utah   264652 Both sexes Age 20 to 24 years
+##  7 49    Utah   251376 Both sexes Age 25 to 29 years
+##  8 49    Utah   220430 Both sexes Age 30 to 34 years
+##  9 49    Utah   231242 Both sexes Age 35 to 39 years
+## 10 49    Utah   212211 Both sexes Age 40 to 44 years
+## # … with 86 more rows
+```
+
+
+---
+
+## A first population pyramid
+
+
+```r
+utah_filtered &lt;- filter(utah, str_detect(AGEGROUP, "^Age"), 
+                  SEX != "Both sexes") %&gt;%
+  mutate(value = ifelse(SEX == "Male", -value, value))
+
+utah_filtered
+```
+
+```
+## # A tibble: 36 x 5
+##    GEOID NAME    value SEX   AGEGROUP          
+##    &lt;chr&gt; &lt;chr&gt;   &lt;dbl&gt; &lt;chr&gt; &lt;fct&gt;             
+##  1 49    Utah  -127060 Male  Age 0 to 4 years  
+##  2 49    Utah  -132868 Male  Age 5 to 9 years  
+##  3 49    Utah  -137940 Male  Age 10 to 14 years
+##  4 49    Utah  -129312 Male  Age 15 to 19 years
+##  5 49    Utah  -135806 Male  Age 20 to 24 years
+##  6 49    Utah  -129179 Male  Age 25 to 29 years
+##  7 49    Utah  -111776 Male  Age 30 to 34 years
+##  8 49    Utah  -117335 Male  Age 35 to 39 years
+##  9 49    Utah  -108090 Male  Age 40 to 44 years
+## 10 49    Utah   -89984 Male  Age 45 to 49 years
+## # … with 26 more rows
+```
+
+---
+
+## A first population pyramid
+
+
+```r
+ggplot(utah_filtered, aes(x = value, y = AGEGROUP, fill = SEX)) + 
+  geom_col()
+```
+
+---
+
+&lt;img src=img/first_pyramid.png style="width: 800px"&gt;
+
+---
+
+## Cleaning up the population pyramid
+
+
+```r
+utah_pyramid &lt;- ggplot(utah_filtered, aes(x = value, y = AGEGROUP, fill = SEX)) + 
+  geom_col(width = 0.95, alpha = 0.75) + 
+  theme_minimal(base_family = "Verdana") + 
+  scale_x_continuous(labels = function(y) paste0(abs(y / 1000), "k")) + 
+  scale_y_discrete(labels = function(x) gsub("Age | years", "", x)) + 
+  scale_fill_manual(values = c("darkred", "navy")) + 
+  labs(x = "", 
+       y = "2019 Census Bureau population estimate", 
+       title = "Population structure in Utah", 
+       fill = "", 
+       caption = "Data source: US Census Bureau population estimates &amp; tidycensus R package")
+
+utah_pyramid
+```
+
+---
+
+&lt;img src=img/utah_pyramid.png style="width: 800px"&gt;
+
+
+---
+
+## Interactive visualization with plotly
+
+
+```r
+library(plotly)
+
+ggplotly(utah_pyramid)
+```
+
+---
+
+&lt;iframe src="img/utah_pyramid.html" frameborder="0" seamless scrolling="no" height="550" width="800"&gt;&lt;/iframe&gt;
+
+---
+class: middle, center, inverse
+
+## Advanced visualization with ggplot2 extensions
+
+---
+
+## ggplot2 extensions
+
+* [Highly customized Census data visualizations are possible with extensions to ggplot2](https://exts.ggplot2.tidyverse.org/gallery/)
+
+&lt;img src="img/extensions.png" style="width: 650px"&gt;
+
+---
+
+## Beeswarm plots
+
+
+
+&lt;img src=img/nyc_beeswarm.png style="width: 650px"&gt;
+
+---
+
+## Geo-faceted plots
+
+
+
+&lt;img src=img/geopyramids.png style="width: 650px"&gt;
+
+---
+
+## Part 3 exercises
+
+* Choose a different variable in the ACS and/or a different location and create a margin of error visualization of your own.
+
+* Modify the population pyramid code to create a different, customized population pyramid.  You can choose a different location (state or county), different colors/plot design, or some combination!
+
+---
+class: middle, center, inverse
+
+## Thank you!
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
