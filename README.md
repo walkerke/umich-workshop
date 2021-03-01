@@ -3,7 +3,17 @@ Slides and code for tidycensus workshops given at the University of Michigan in 
 
 This repository contains the materials for [three tidycensus workshops given at the University of Michigan in March 2021](http://www.ssdan.net/webinars-march-4-11-25-accessing-and-analyzing-census-data-using-r).
 
-Follow along in RStudio Cloud at https://rstudio.cloud/project/2253210. 
+To use these materials, clone the repository to your computer: 
+
+```
+$ git clone https://github.com/walkerke/umich-workshop.git
+```
+
+or download and unzip in a directory of your choosing.  
+
+You'll also need to obtain a Census API key at https://api.census.gov/data/key_signup.html and activate it from your email account.  Have the key ready for the workshop.  
+
+Alternatively, you can use a pre-configured environment in RStudio Cloud, available at  https://rstudio.cloud/project/2253210.  
 
 ## License
 
