@@ -929,8 +929,6 @@ us_pyramid_data <- get_estimates(
 ggplot(us_pyramid_data, aes(x = prop, y = AGEGROUP, fill = SEX)) + 
   geom_col(width = 1) + 
   theme_minimal() + 
-  scale_x_continuous(labels = function(y) paste0(abs(y / 1000), "k")) + 
-  scale_y_discrete(labels = function(x) gsub("Age | years", "", x)) + 
   scale_fill_manual(values = c("darkred", "navy")) + 
   facet_geo(~NAME, grid = "us_state_with_DC_PR_grid2",
             label = "code") + 
