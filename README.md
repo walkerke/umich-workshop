@@ -15,6 +15,12 @@ You'll also need to obtain a Census API key at https://api.census.gov/data/key_s
 
 Alternatively, you can use a pre-configured environment in RStudio Cloud, available at  https://rstudio.cloud/project/2253210.  
 
+## Slides
+
+* [Workshop 1: Accessing and Analyzing US Census Data in R](http://walker-data.com/umich-workshop/census-data-in-r/slides/#1)
+* Workshop 2: Spatial Analysis of US Census Data in R (coming soon!)
+* Workshop 3: Analyzing US Census Microdata in R (coming soon!)
+
 ## License
 
 <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/88x31.png" /></a><br />This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/">Creative Commons Attribution-ShareAlike 4.0 International License</a>.
