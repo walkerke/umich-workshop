@@ -17,7 +17,7 @@ output:
 ```{r setup, include=FALSE}
 options(htmltools.dir.version = FALSE)
 options(tigris_use_cache = TRUE)
-library(tidycensus)
+library(tigris)
 
 knitr::opts_chunk$set(message = FALSE, warning = FALSE, fig.width = 8)
 ```
@@ -55,7 +55,7 @@ style_xaringan(
 
 * Today: spatial analysis and mapping in R
 
-* Last Thursday (March 4): an introduction to analyzing US Census data with tidycensus
+* Last Thursday (March 4): an introduction to analyzing US Census data with tidycensus 
 
 * Thursday, March 25: working with US Census microdata (PUMS) with R and tidycensus
 
@@ -83,4 +83,426 @@ class: middle, center, inverse
 .footnote[Source: [US Census Bureau](https://www2.census.gov/geo/pdfs/reference/geodiagram.pdf)]
 
 ---
+
+## Census TIGER/Line shapefiles
+
+{info here}
+
+---
+
+## A typical GIS workflow
+
+{image from QGIS here}
+
+---
+
+## The __tigris__ R package
+
+.pull-left[
+<img src="https://raw.githubusercontent.com/walkerke/tigris/master/tools/readme/tigris_sticker.png" style="width: 400px">
+]
+
+.pull-right[
+
+{info here}
+
+]
+
+---
+
+## Basic usage of tigris
+
+* To use tigris, call a function that corresponds to the Census geography you want, optionally by `state` or `county`, when appropriate
+
+```{r basic-usage}
+or_counties <- counties(state = "OR")
+
+or_counties
+```
+---
+
+```{r}
+plot(or_counties$geometry)
+```
+
+---
+
+## The __sf__ package and simple feature geometry
+
+{info here}
+
+---
+
+## Datasets available in tigris
+
+* __Legal entities__: units that have legal significance in the US (e.g. states, counties)
+
+* __Statistical entities__: units that are used to tabulate Census data but do not have legal standing (e.g. Census tracts or block groups)
+
+* __Geographic features__: other geographic datasets provided by the Census Bureau that are not used for demographic tabulation (e.g. roads, water)
+
+---
+
+## Example: statistical entities
+
+```{r}
+benton_tracts <- tracts(state = "OR", county = "Benton")
+
+plot(benton_tracts$geometry)
+```
+
+---
+
+## Example: geographic features
+
+```{r}
+benton_roads <- roads(state = "OR", county = "Benton")
+
+plot(benton_roads$geometry)
+```
+
+
+---
+
+## How tigris works
+
+When you call a tigris function, it does the following: 
+
+* _Downloads_ your data from the US Census Bureau website; 
+
+* _Stores_ your data in a temporary directory by default; 
+
+* _Loads_ your data into R as a simple features object using `sf::st_read()`
+
+* Recommended option: use `options(tigris_use_cache = TRUE)` to cache downloaded shapefiles and prevent having to re-download every time you use them
+
+---
+class: middle, center, inverse
+
+## tigris features and options
+
+---
+
+## Cartographic boundary shapefiles
+
+"Why does Michigan look so weird?"
+
+```{r}
+mi_counties <- counties("MI")
+
+plot(mi_counties$geometry)
+```
+
+---
+
+## Cartographic boundary shapefiles
+
+* Use the argument `cb = TRUE` to obtain a _cartographic boundary shapefile_ pre-clipped to the US shoreline
+
+* For some geographies, highly generalized (1:5 million and 1:20 million) shapefiles are available with the `resolution` argument
+
+```{r}
+mi_counties_cb <- counties("MI", cb = TRUE)
+
+plot(mi_counties_cb$geometry)
+```
+
+---
+
+## Understanding yearly differences in TIGER/Line files
+
+{info here}
+
+---
+
+## Interactive viewing of data with __mapview__
+
+{demo here}
+
+---
+
+## US Census shapefiles and coordinate reference systems
+
+{info here, nod to crsuggest}
+
+---
+
+## Part 1 exercises
+
+{exercises here}
+
+---
+class: middle, center, inverse
+
+## Part 2: Mapping US Census data in R
+
+---
+
+## Geometry in tidycensus
+
+```{r}
+library(tidycensus)
+options(tigris_use_cache = TRUE)
+
+dc_income <- get_acs(geography = "tract", 
+                     variables = c(hhincome = "B19013_001"), 
+                     state = "DC", 
+                     geometry = TRUE)
+
+dc_income
+
+```
+
+---
+
+## Basic mapping with base plotting
+
+```{r}
+plot(dc_income["estimate"])
+```
+
+---
+class: middle, center, inverse
+
+## Mapping Census data with tmap
+
+---
+
+## The tmap package
+
+{info here}
+
+---
+
+## Mapping race and ethnicity
+
+```{r}
+library(tidyverse)
+
+hennepin_race <- get_acs(
+  geography = "tract",
+  state = "MN",
+  county = "Hennepin",
+  variables = c(White = "B03002_003",
+                Black = "B03002_004",
+                Native = "B03002_005",
+                Asian = "B03002_006",
+                Hispanic = "B03002_012"),
+  summary_var = "B03002_001",
+  geometry = TRUE
+) %>%
+  mutate(percent = 100 * (estimate / summary_est))
+
+glimpse(hennepin_race)
+```
+---
+
+## Basic plotting with tmap
+
+```{r}
+library(tmap)
+
+hennepin_black <- filter(hennepin_race, variable == "Black")
+
+tm_shape(hennepin_black) + 
+  tm_polygons() 
+```
+
+---
+
+## Choropleth mapping with tmap
+
+```{r}
+tm_shape(hennepin_black) + 
+  tm_fill(col = "percent")
+```
+
+---
+
+## Modifying choropleth classes
+
+```{r}
+tm_shape(hennepin_black, 
+         projection = sf::st_crs(26915)) + 
+  tm_fill(col = "percent",
+          style = "quantile",
+          n = 7,
+          palette = "Purples",
+          title = "ACS estimate") + 
+  tm_layout(title = "Percent Black population\nby Census tract",
+            frame = FALSE,
+            legend.outside = TRUE)
+```
+
+---
+
+## Graduated symbol maps
+
+```{r}
+tm_shape(hennepin_black) + 
+  tm_polygons() + 
+  tm_bubbles(size = "estimate", alpha = 0.5, 
+             col = "navy")
+```
+
+---
+
+## Faceted mapping
+
+```{r}
+tm_shape(hennepin_race,
+         projection = sf::st_crs(26915)) + 
+  tm_facets(by = "variable") + 
+  tm_fill(col = "percent",
+          style = "quantile",
+          n = 7,
+          palette = "Purples")
+```
+
+---
+
+## Advanced example: dot-density mapping
+
+```{r, echo = FALSE, eval = FALSE}
+groups <- unique(hennepin_race$variable)
+
+hennepin_dots <- map(groups, ~{
+  group_sf <- filter(hennepin_race, variable == .x)
+  
+  dots <- group_sf %>%
+    st_transform(26915) %>%
+    mutate(est50 = as.integer(estimate / 50)) %>%
+    st_sample(size = .$est50, exact = TRUE) %>%
+    st_sf() %>%
+    mutate(group = .x)
+  
+  dots
+  
+}) %>%
+  bind_rows() %>%
+  slice_sample(prop = 1)
+```
+
+---
+
+## Advanced example: dot-density mapping
+
+```{r}
+tm_shape(hennepin_dots) +
+  tm_dots(
+    col = "group", 
+    palette = "Set1",
+    size = 0.005
+  )
+```
+
+---
+
+## Mapping the entire US with `shift_geo`
+
+```{r}
+library(tidycensus)
+library(tidyverse)
+
+us_median_age <- get_acs(geography = "state",
+                         variables = "B01002_001",
+                         year = 2019,
+                         survey = "acs1",
+                         geometry = TRUE,
+                         shift_geo = TRUE)
+
+us_median_age
+```
+---
+
+## Mapping the entire US with `shift_geo`
+
+```{r}
+tm_shape(us_median_age) + 
+  tm_polygons()
+```
+
+---
+
+## Mapping the entire US with `shift_geo`
+
+```{r}
+tm_shape(us_median_age) + 
+  tm_polygons(col = "estimate", palette = "RdPu", title = "Median age") + 
+  tm_layout(legend.outside = TRUE)
+```
+
+## Interactive mapping
+
+{a few slides here}
+
+---
+
+## Exercises
+
+{fill in here}
+
+---
+class: middle, center, inverse
+
+## Spatial analysis of US Census data with the sf package
+
+---
+
+## "Tidy" spatial analysis
+
+{general discussion here}
+
+---
+
+## Spatial overlay
+
+{info here}
+
+---
+
+## Methods for spatial overlay
+
+{info here}
+
+---
+
+## Spatial predicates
+
+{examples here}
+
+---
+class: middle, center, inverse
+
+## Spatial joins and group-wise spatial analysis
+
+---
+
+## Spatial joins
+
+{info here}
+
+---
+
+## Distance and proximity analysis
+
+{series of slides here}
+
+---
+
+## Exploratory spatial data analysis
+
+{info here}
+
+---
+
+## Spatial clustering
+
+{info here}
+
+
+
+
+
+
 
