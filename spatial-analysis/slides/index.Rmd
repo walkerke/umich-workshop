@@ -1,6 +1,6 @@
 ---
 title: "Spatial Analysis of US Census Data in R"
-subtitle: "Geometries, maps, and models"  
+subtitle: "Geometries, maps, and methods"  
 author: "Kyle Walker"
 date: March 11, 2021
 output:
@@ -104,7 +104,9 @@ class: middle, center, inverse
 
 .pull-right[
 
-{info here}
+* R interface to the US Census Bureau's TIGER/Line shapefile FTP server
+
+* No API key necessary - just install the package and start using Census shapefiles in R!
 
 ]
 
@@ -129,7 +131,21 @@ plot(or_counties$geometry)
 
 ## The __sf__ package and simple feature geometry
 
-{info here}
+.pull-left[
+
+<img src="https://user-images.githubusercontent.com/520851/34887433-ce1d130e-f7c6-11e7-83fc-d60ad4fae6bd.gif" style="width: 300px">
+
+]
+
+.pull-right[
+
+* The sf package implements a _simple features data model_ for vector spatial data in R
+
+* Vector geometries: _points_, _lines_, and _polygons_ stored in a list-column of a data frame
+
+* Allows for tidy spatial data analysis (coming in hour 3!)
+
+]
 
 ---
 
@@ -161,6 +177,16 @@ benton_roads <- roads(state = "OR", county = "Benton")
 plot(benton_roads$geometry)
 ```
 
+---
+
+## Example: geographic features
+
+```{r}
+dc_landmarks <- landmarks("DC", type = "point")
+
+plot(dc_landmarks$geometry)
+```
+
 
 ---
 
@@ -185,45 +211,157 @@ class: middle, center, inverse
 
 ## Cartographic boundary shapefiles
 
-"Why does Michigan look so weird?"
+.pull-left[
+* Question I've received over the years: "Why does Michigan look so weird?"
 
+* The core TIGER/Line shapefiles include _water area_ that belongs to US states and counties
+
+]
+
+.pull-right[
 ```{r}
 mi_counties <- counties("MI")
 
 plot(mi_counties$geometry)
 ```
+]
+
 
 ---
 
 ## Cartographic boundary shapefiles
 
+
+.pull-left[
 * Use the argument `cb = TRUE` to obtain a _cartographic boundary shapefile_ pre-clipped to the US shoreline
 
 * For some geographies, highly generalized (1:5 million and 1:20 million) shapefiles are available with the `resolution` argument
+]
 
+.pull-right[
 ```{r}
 mi_counties_cb <- counties("MI", cb = TRUE)
 
 plot(mi_counties_cb$geometry)
 ```
+]
 
 ---
 
 ## Understanding yearly differences in TIGER/Line files
 
-{info here}
+* Whereas legal entities change shape very rarely (but they do change!), statistical entities change with every decennial Census
+
+* tigris fetches Census shapefiles from 1990 up through 2020
+
+```{r}
+tarrant90 <- tracts("TX", "Tarrant", cb = TRUE, year = 1990)
+tarrant00 <- tracts("TX", "Tarrant", cb = TRUE, year = 2000)
+tarrant10 <- tracts("TX", "Tarrant", cb = TRUE, year = 2010)
+# Cartographic boundary files not yet released for 2020
+tarrant20 <- tracts("TX", "Tarrant", year = 2020)
+
+```
+---
+
+```{r}
+par(mfrow = c(2, 2))
+
+plot(tarrant90$geometry, main = "1990")
+plot(tarrant00$geometry, main = "2000")
+plot(tarrant10$geometry, main = "2010")
+plot(tarrant20$geometry, main = "2020")
+
+
+```
 
 ---
 
 ## Interactive viewing of data with __mapview__
 
-{demo here}
+```{r, eval = FALSE}
+library(mapview)
 
+mapview(tarrant20)
+```
+
+---
+
+## Comparing shapes interactively
+
+```{r, eval = FALSE}
+library(leafsync)
+
+sync(mapview(tarrant90), mapview(tarrant20))
+
+```
+
+---
+
+## Combining spatial datasets
+
+```{r}
+library(tidyverse)
+
+state_codes <- c(state.abb, "DC")
+
+us_bgs <- map_df(state_codes, ~block_groups(state = .x, cb = TRUE))
+
+glimpse(us_bgs)
+```
 ---
 
 ## US Census shapefiles and coordinate reference systems
 
-{info here, nod to crsuggest}
+* _Coordinate reference system_ (CRS): how coordinates in your spatial data are referenced to the Earth's surface
+
+* Distinction: _geographic coordinate systems_ (longitude/latitude) and _projected coordinate systems_ (planar, commonly measured in meters or US feet)
+
+* CRS used by Census shapefiles: North American Datum of 1983 (EPSG code 4269)
+
+---
+
+```{r}
+library(sf)
+
+fl_counties <- counties("FL", cb = TRUE)
+
+st_crs(fl_counties)
+```
+---
+
+## Choosing a coordinate reference system
+
+* __crsuggest__ my _developmental_ R package for helping choose the right coordinate system transformation
+
+* To install: `remotes::install_github("walkerke/crsuggest")`
+
+* Two core functions: `suggest_crs()` for a table of CRS recommendations; `suggest_top_crs()` for a quick best match
+
+
+---
+
+## Choosing a coordinate reference system
+
+```{r}
+library(crsuggest)
+
+fl_crs <- suggest_crs(fl_counties)
+
+glimpse(fl_crs)
+```
+
+---
+
+## CRS transformations
+
+* Use the `st_transform()` function in the sf package to perform coordinate reference system transformations with the appropriate EPSG code
+
+```{r}
+fl_projected <- st_transform(fl_counties, crs = 3086)
+
+head(fl_projected)
+```
 
 ---
 
@@ -238,7 +376,34 @@ class: middle, center, inverse
 
 ---
 
+## Typical Census GIS workflows
+
+.pull-left[
+
+Traditionally, getting "spatial" Census data requires: 
+
+* Fetching shapefiles from the Census website;
+
+* Downloading a CSV of data, cleaning/formatting it;
+
+* Loading geometries and data into your GIS of choice;
+
+* Aligning key fields in your GIS and joining your data
+
+]
+
+.pull-right[
+
+{image from QGIS here}
+
+
+]
+
+---
+
 ## Geometry in tidycensus
+
+* tidycensus takes care of this entire process with the argument `geometry = TRUE`
 
 ```{r}
 library(tidycensus)
@@ -249,8 +414,12 @@ dc_income <- get_acs(geography = "tract",
                      state = "DC", 
                      geometry = TRUE)
 
-dc_income
+```
 
+---
+
+```{r}
+dc_income
 ```
 
 ---
@@ -262,6 +431,25 @@ plot(dc_income["estimate"])
 ```
 
 ---
+
+## Basic mapping with ggplot2
+
+* `geom_sf()`: ggplot2 method to use simple features in your data visualization workflows
+
+```{r}
+library(tidyverse)
+
+dc_map <- ggplot(dc_income, aes(fill = estimate)) + 
+  geom_sf()
+```
+
+---
+
+```{r}
+dc_map
+```
+
+---
 class: middle, center, inverse
 
 ## Mapping Census data with tmap
@@ -270,15 +458,27 @@ class: middle, center, inverse
 
 ## The tmap package
 
-{info here}
+.pull-left[
+
+<img src="https://user-images.githubusercontent.com/2444081/106523217-12c12880-64e1-11eb-8d55-01442d535400.png" style="width: 350px">
+
+]
+
+.pull-right[
+
+* Comprehensive package for thematic mapping in R
+
+* ggplot2-like syntax, but designed in a way to feel friendly to GIS cartographers coming to R for mapping
+
+]
 
 ---
 
-## Mapping race and ethnicity
+## Example data
+
+* Our example: comparing the distributions of racial and ethnic groups in Hennepin County, Minnesota (Minneapolis)
 
 ```{r}
-library(tidyverse)
-
 hennepin_race <- get_acs(
   geography = "tract",
   state = "MN",
@@ -292,39 +492,92 @@ hennepin_race <- get_acs(
   geometry = TRUE
 ) %>%
   mutate(percent = 100 * (estimate / summary_est))
+```
 
+---
+
+```{r}
 glimpse(hennepin_race)
 ```
 ---
 
 ## Basic plotting with tmap
 
-```{r}
+.pull-left[
+
+* `tm_shape()` initializes the shape; `tm_polygons()` shows the polygons for quick display
+
+```{r, eval = FALSE}
 library(tmap)
 
-hennepin_black <- filter(hennepin_race, variable == "Black")
+hennepin_black <- filter(hennepin_race, 
+                         variable == "Black")
 
 tm_shape(hennepin_black) + 
   tm_polygons() 
 ```
 
+]
+
+.pull-right[
+
+```{r, echo = FALSE}
+library(tmap)
+
+hennepin_black <- filter(hennepin_race, 
+                         variable == "Black")
+
+tm_shape(hennepin_black) + 
+  tm_polygons() 
+```
+
+]
+
+
+
 ---
 
 ## Choropleth mapping with tmap
 
-```{r}
+.pull-left[
+
+* _Choropleth maps_ show statistical variation through color or shading of areas
+
+* They generally should be used with _normalized data_ such as rates or percentages, not counts
+
+```{r, eval = FALSE}
 tm_shape(hennepin_black) + 
-  tm_fill(col = "percent")
+  tm_polygons(col = "percent")
 ```
+
+]
+
+.pull-right[
+
+```{r, echo = FALSE}
+tm_shape(hennepin_black) + 
+  tm_polygons(col = "percent")
+```
+
+]
+
 
 ---
 
-## Modifying choropleth classes
+## Modifying choropleth options
 
-```{r}
+* Color palettes can be modified with the `palette` parameter, which accepts ColorBrewer and viridis palettes
+
+* If you've mapped with GIS software before, the `style` parameter implements various breaks methods, including `"equal"`, `"quantile"` and `"jenks"`
+
+---
+
+.pull-left[
+
+```{r, eval = FALSE}
 tm_shape(hennepin_black, 
          projection = sf::st_crs(26915)) + 
-  tm_fill(col = "percent",
+  tm_polygons(col = "percent",
           style = "quantile",
           n = 7,
           palette = "Purples",
@@ -334,12 +587,83 @@ tm_shape(hennepin_black,
             legend.outside = TRUE)
 ```
 
+]
+
+.pull-right[
+
+```{r, echo = FALSE}
+tm_shape(hennepin_black, 
+         projection = sf::st_crs(26915)) + 
+  tm_polygons(col = "percent",
+          style = "quantile",
+          n = 7,
+          palette = "Purples",
+          title = "ACS estimate") + 
+  tm_layout(title = "Percent Black population\nby Census tract",
+            frame = FALSE,
+            legend.outside = TRUE)
+```
+
+]
+
+
+
+---
+
+## tmap choropleth tips and tricks
+
+* Use `tmaptools::palette_explorer()` to interactively browse color options
+
+* Use the option `tm_layout(legend.hist = TRUE)` to display the distribution of data values among classes
+
+---
+
+.pull-left[
+
+```{r, eval = FALSE}
+tm_shape(hennepin_black, 
+         projection = sf::st_crs(26915)) + 
+  tm_polygons(col = "percent",
+          style = "jenks",
+          n = 7,
+          palette = "viridis",
+          title = "ACS estimate",
+          legend.hist = TRUE) + 
+  tm_layout(title = "Percent Black population\nby Census tract",
+            frame = FALSE,
+            legend.outside = TRUE)
+```
+
+]
+
+.pull-right[
+
+```{r, echo = FALSE}
+tm_shape(hennepin_black, 
+         projection = sf::st_crs(26915)) + 
+  tm_polygons(col = "percent",
+          style = "jenks",
+          n = 7,
+          palette = "viridis",
+          title = "ACS estimate",
+          legend.hist = TRUE) + 
+  tm_layout(title = "Percent Black population\nby Census tract",
+            frame = FALSE,
+            legend.outside = TRUE)
+```
+
+]
+
 ---
 
 ## Graduated symbol maps
 
+* Graduated symbols: using _size_ of a symbol to represent statistical variation on a map
+
+* Implemented in tmap with `tm_bubbles()`
+
 ```{r}
-tm_shape(hennepin_black) + 
+symbol_map <- tm_shape(hennepin_black) + 
   tm_polygons() + 
   tm_bubbles(size = "estimate", alpha = 0.5, 
              col = "navy")
@@ -347,53 +671,71 @@ tm_shape(hennepin_black) +
 
 ---
 
+```{r}
+symbol_map
+```
+
+---
+
 ## Faceted mapping
 
+* `tm_facets()` allows for comparative small multiples maps.  It works well with long-form spatial data returned by tidycensus
+
 ```{r}
-tm_shape(hennepin_race,
+facet_map <- tm_shape(hennepin_race,
          projection = sf::st_crs(26915)) + 
-  tm_facets(by = "variable") + 
+  tm_facets(by = "variable", scale.factor = 4) + 
   tm_fill(col = "percent",
           style = "quantile",
           n = 7,
-          palette = "Purples")
+          palette = "Blues")
+```
+
+---
+
+```{r}
+facet_map
 ```
 
 ---
 
 ## Advanced example: dot-density mapping
 
+.pull-left[
+
+* Dot-density maps scatter dots relative to data values, and are good for showing within-polygon diversity
+
+* To generate points for dot-density mapping, points should be proportionally sampled in polygons relative to data values then randomized with `slice_sample()`
+
+]
+
+.pull-right[
+
 ```{r, echo = FALSE, eval = FALSE}
 groups <- unique(hennepin_race$variable)
 
-hennepin_dots <- map(groups, ~{
-  group_sf <- filter(hennepin_race, variable == .x)
-  
-  dots <- group_sf %>%
+hennepin_dots <- map_df(groups, ~{
+  hennepin_race %>%
+    filter(variable == .x) %>%
     st_transform(26915) %>%
     mutate(est50 = as.integer(estimate / 50)) %>%
     st_sample(size = .$est50, exact = TRUE) %>%
     st_sf() %>%
     mutate(group = .x)
-  
-  dots
-  
 }) %>%
-  bind_rows() %>%
   slice_sample(prop = 1)
 ```
+
+]
+
 
 ---
 
 ## Advanced example: dot-density mapping
 
-```{r}
+```{r, eval = FALSE}
 tm_shape(hennepin_dots) +
-  tm_dots(
-    col = "group", 
-    palette = "Set1",
-    size = 0.005
-  )
+  tm_dots(col = "group", palette = "Set1", size = 0.005)
 ```
 
 ---
@@ -438,6 +780,21 @@ tm_shape(us_median_age) +
 
 ---
 
+## What if I still want to use a GIS?
+
+* No problem! Write out your data to a shapefile/GeoJSON/GeoPackage with `sf::st_write()` and load into your GIS of choice
+
+* Recommendation: use `output = "wide"` for multi-variable datasets (easier to use in a desktop GIS)
+
+```{r, eval = FALSE}
+library(sf)
+
+st_write(dc_income, "data/dc_income.shp")
+```
+
+
+---
+
 ## Exercises
 
 {fill in here}
@@ -448,6 +805,10 @@ class: middle, center, inverse
 ## Spatial analysis of US Census data with the sf package
 
 ---
+
+## sf: a tidy data model for spatial analysis
+
+
 
 ## "Tidy" spatial analysis
 
