@@ -157,7 +157,7 @@ or_counties
 plot(or_counties$geometry)
 ```
 
-![](index_files/figure-html/unnamed-chunk-1-1.png)&lt;!-- --&gt;
+![](index_files/figure-html/basic-plot-1.png)&lt;!-- --&gt;
 
 ---
 
@@ -200,7 +200,7 @@ benton_tracts &lt;- tracts(state = "OR", county = "Benton")
 plot(benton_tracts$geometry)
 ```
 
-![](index_files/figure-html/unnamed-chunk-2-1.png)&lt;!-- --&gt;
+![](index_files/figure-html/benton-tracts-1.png)&lt;!-- --&gt;
 
 ---
 
@@ -213,7 +213,7 @@ benton_roads &lt;- roads(state = "OR", county = "Benton")
 plot(benton_roads$geometry)
 ```
 
-![](index_files/figure-html/unnamed-chunk-3-1.png)&lt;!-- --&gt;
+![](index_files/figure-html/benton-roads-1.png)&lt;!-- --&gt;
 
 ---
 
@@ -226,7 +226,7 @@ dc_landmarks &lt;- landmarks("DC", type = "point")
 plot(dc_landmarks$geometry)
 ```
 
-![](index_files/figure-html/unnamed-chunk-4-1.png)&lt;!-- --&gt;
+![](index_files/figure-html/dc-landmarks-1.png)&lt;!-- --&gt;
 
 
 ---
@@ -267,7 +267,7 @@ mi_counties &lt;- counties("MI")
 plot(mi_counties$geometry)
 ```
 
-![](index_files/figure-html/unnamed-chunk-5-1.png)&lt;!-- --&gt;
+![](index_files/figure-html/michigan-tiger-1.png)&lt;!-- --&gt;
 ]
 
 
@@ -290,7 +290,7 @@ mi_counties_cb &lt;- counties("MI", cb = TRUE)
 plot(mi_counties_cb$geometry)
 ```
 
-![](index_files/figure-html/unnamed-chunk-6-1.png)&lt;!-- --&gt;
+![](index_files/figure-html/michigan-cb-1.png)&lt;!-- --&gt;
 ]
 
 ---
@@ -321,7 +321,7 @@ plot(tarrant10$geometry, main = "2010")
 plot(tarrant20$geometry, main = "2020")
 ```
 
-![](index_files/figure-html/unnamed-chunk-8-1.png)&lt;!-- --&gt;
+![](index_files/figure-html/plot-yearly-data-1.png)&lt;!-- --&gt;
 
 ---
 
@@ -586,7 +586,7 @@ dc_income
 plot(dc_income["estimate"])
 ```
 
-![](index_files/figure-html/unnamed-chunk-17-1.png)&lt;!-- --&gt;
+![](index_files/figure-html/plot-geometry-1.png)&lt;!-- --&gt;
 
 ---
 
@@ -609,7 +609,7 @@ dc_map &lt;- ggplot(dc_income, aes(fill = estimate)) +
 dc_map
 ```
 
-![](index_files/figure-html/unnamed-chunk-19-1.png)&lt;!-- --&gt;
+![](index_files/figure-html/plot-geom-sf-1.png)&lt;!-- --&gt;
 
 ---
 class: middle, center, inverse
@@ -700,7 +700,7 @@ tm_shape(hennepin_black) +
 
 .pull-right[
 
-![](index_files/figure-html/unnamed-chunk-23-1.png)&lt;!-- --&gt;
+![](index_files/figure-html/polygons-map-1.png)&lt;!-- --&gt;
 
 ]
 
@@ -726,7 +726,7 @@ tm_shape(hennepin_black) +
 
 .pull-right[
 
-![](index_files/figure-html/unnamed-chunk-25-1.png)&lt;!-- --&gt;
+![](index_files/figure-html/choropleth-show-1.png)&lt;!-- --&gt;
 
 ]
 
@@ -761,7 +761,7 @@ tm_shape(hennepin_black,
 
 .pull-right[
 
-![](index_files/figure-html/unnamed-chunk-27-1.png)&lt;!-- --&gt;
+![](index_files/figure-html/custom-choropleth-show-1.png)&lt;!-- --&gt;
 
 ]
 
@@ -798,7 +798,7 @@ tm_shape(hennepin_black,
 
 .pull-right[
 
-![](index_files/figure-html/unnamed-chunk-29-1.png)&lt;!-- --&gt;
+![](index_files/figure-html/jenks-show-1.png)&lt;!-- --&gt;
 
 ]
 
@@ -825,7 +825,7 @@ symbol_map &lt;- tm_shape(hennepin_black) +
 symbol_map
 ```
 
-![](index_files/figure-html/unnamed-chunk-31-1.png)&lt;!-- --&gt;
+![](index_files/figure-html/bubbles-map-1.png)&lt;!-- --&gt;
 
 ---
 
@@ -851,7 +851,7 @@ facet_map &lt;- tm_shape(hennepin_race,
 facet_map
 ```
 
-![](index_files/figure-html/unnamed-chunk-33-1.png)&lt;!-- --&gt;
+![](index_files/figure-html/facet-map-1.png)&lt;!-- --&gt;
 
 ---
 
@@ -888,9 +888,6 @@ tm_shape(hennepin_dots) +
 
 
 ```r
-library(tidycensus)
-library(tidyverse)
-
 us_median_age &lt;- get_acs(geography = "state",
                          variables = "B01002_001",
                          year = 2019,
@@ -941,7 +938,7 @@ tm_shape(us_median_age) +
   tm_polygons()
 ```
 
-![](index_files/figure-html/unnamed-chunk-37-1.png)&lt;!-- --&gt;
+![](index_files/figure-html/show-shift-geo-1.png)&lt;!-- --&gt;
 
 ---
 
@@ -954,7 +951,7 @@ tm_shape(us_median_age) +
   tm_layout(legend.outside = TRUE)
 ```
 
-![](index_files/figure-html/unnamed-chunk-38-1.png)&lt;!-- --&gt;
+![](index_files/figure-html/style-shift-geo-1.png)&lt;!-- --&gt;
 
 ## Interactive mapping
 

@@ -18,6 +18,8 @@ output:
 options(htmltools.dir.version = FALSE)
 options(tigris_use_cache = TRUE)
 library(tigris)
+library(tmap)
+tmap_options(legend.text.size = 1)
 
 knitr::opts_chunk$set(message = FALSE, warning = FALSE, fig.width = 8)
 ```
@@ -123,7 +125,7 @@ or_counties
 ```
 ---
 
-```{r}
+```{r basic-plot}
 plot(or_counties$geometry)
 ```
 
@@ -161,7 +163,7 @@ plot(or_counties$geometry)
 
 ## Example: statistical entities
 
-```{r}
+```{r benton-tracts}
 benton_tracts <- tracts(state = "OR", county = "Benton")
 
 plot(benton_tracts$geometry)
@@ -171,7 +173,7 @@ plot(benton_tracts$geometry)
 
 ## Example: geographic features
 
-```{r}
+```{r benton-roads}
 benton_roads <- roads(state = "OR", county = "Benton")
 
 plot(benton_roads$geometry)
@@ -181,7 +183,7 @@ plot(benton_roads$geometry)
 
 ## Example: geographic features
 
-```{r}
+```{r dc-landmarks}
 dc_landmarks <- landmarks("DC", type = "point")
 
 plot(dc_landmarks$geometry)
@@ -219,7 +221,7 @@ class: middle, center, inverse
 ]
 
 .pull-right[
-```{r}
+```{r michigan-tiger}
 mi_counties <- counties("MI")
 
 plot(mi_counties$geometry)
@@ -239,7 +241,7 @@ plot(mi_counties$geometry)
 ]
 
 .pull-right[
-```{r}
+```{r michigan-cb}
 mi_counties_cb <- counties("MI", cb = TRUE)
 
 plot(mi_counties_cb$geometry)
@@ -254,7 +256,7 @@ plot(mi_counties_cb$geometry)
 
 * tigris fetches Census shapefiles from 1990 up through 2020
 
-```{r}
+```{r get-yearly-data}
 tarrant90 <- tracts("TX", "Tarrant", cb = TRUE, year = 1990)
 tarrant00 <- tracts("TX", "Tarrant", cb = TRUE, year = 2000)
 tarrant10 <- tracts("TX", "Tarrant", cb = TRUE, year = 2010)
@@ -264,7 +266,7 @@ tarrant20 <- tracts("TX", "Tarrant", year = 2020)
 ```
 ---
 
-```{r}
+```{r plot-yearly-data}
 par(mfrow = c(2, 2))
 
 plot(tarrant90$geometry, main = "1990")
@@ -279,7 +281,7 @@ plot(tarrant20$geometry, main = "2020")
 
 ## Interactive viewing of data with __mapview__
 
-```{r, eval = FALSE}
+```{r mapview, eval = FALSE}
 library(mapview)
 
 mapview(tarrant20)
@@ -289,7 +291,7 @@ mapview(tarrant20)
 
 ## Comparing shapes interactively
 
-```{r, eval = FALSE}
+```{r sync, eval = FALSE}
 library(leafsync)
 
 sync(mapview(tarrant90), mapview(tarrant20))
@@ -300,7 +302,7 @@ sync(mapview(tarrant90), mapview(tarrant20))
 
 ## Combining spatial datasets
 
-```{r}
+```{r combine-bgs}
 library(tidyverse)
 
 state_codes <- c(state.abb, "DC")
@@ -321,7 +323,7 @@ glimpse(us_bgs)
 
 ---
 
-```{r}
+```{r check-crs}
 library(sf)
 
 fl_counties <- counties("FL", cb = TRUE)
@@ -343,7 +345,7 @@ st_crs(fl_counties)
 
 ## Choosing a coordinate reference system
 
-```{r}
+```{r suggest-crs}
 library(crsuggest)
 
 fl_crs <- suggest_crs(fl_counties)
@@ -357,7 +359,7 @@ glimpse(fl_crs)
 
 * Use the `st_transform()` function in the sf package to perform coordinate reference system transformations with the appropriate EPSG code
 
-```{r}
+```{r transform-crs}
 fl_projected <- st_transform(fl_counties, crs = 3086)
 
 head(fl_projected)
@@ -405,7 +407,7 @@ Traditionally, getting "spatial" Census data requires:
 
 * tidycensus takes care of this entire process with the argument `geometry = TRUE`
 
-```{r}
+```{r tidycensus-geometry}
 library(tidycensus)
 options(tigris_use_cache = TRUE)
 
@@ -418,7 +420,7 @@ dc_income <- get_acs(geography = "tract",
 
 ---
 
-```{r}
+```{r show-geometry}
 dc_income
 ```
 
@@ -426,7 +428,7 @@ dc_income
 
 ## Basic mapping with base plotting
 
-```{r}
+```{r plot-geometry}
 plot(dc_income["estimate"])
 ```
 
@@ -436,7 +438,7 @@ plot(dc_income["estimate"])
 
 * `geom_sf()`: ggplot2 method to use simple features in your data visualization workflows
 
-```{r}
+```{r geom-sf}
 library(tidyverse)
 
 dc_map <- ggplot(dc_income, aes(fill = estimate)) + 
@@ -445,7 +447,7 @@ dc_map <- ggplot(dc_income, aes(fill = estimate)) +
 
 ---
 
-```{r}
+```{r plot-geom-sf}
 dc_map
 ```
 
@@ -478,7 +480,7 @@ class: middle, center, inverse
 
 * Our example: comparing the distributions of racial and ethnic groups in Hennepin County, Minnesota (Minneapolis)
 
-```{r}
+```{r get-hennepin-data}
 hennepin_race <- get_acs(
   geography = "tract",
   state = "MN",
@@ -496,7 +498,7 @@ hennepin_race <- get_acs(
 
 ---
 
-```{r}
+```{r glimpse-hennepin-data}
 glimpse(hennepin_race)
 ```
 ---
@@ -507,7 +509,7 @@ glimpse(hennepin_race)
 
 * `tm_shape()` initializes the shape; `tm_polygons()` shows the polygons for quick display
 
-```{r, eval = FALSE}
+```{r polygons-code, eval = FALSE}
 library(tmap)
 
 hennepin_black <- filter(hennepin_race, 
@@ -521,7 +523,7 @@ tm_shape(hennepin_black) +
 
 .pull-right[
 
-```{r, echo = FALSE}
+```{r polygons-map, echo = FALSE}
 library(tmap)
 
 hennepin_black <- filter(hennepin_race, 
@@ -545,7 +547,7 @@ tm_shape(hennepin_black) +
 
 * They generally should be used with _normalized data_ such as rates or percentages, not counts
 
-```{r, eval = FALSE}
+```{r choropleth-code, eval = FALSE}
 tm_shape(hennepin_black) + 
   tm_polygons(col = "percent")
 ```
@@ -554,7 +556,7 @@ tm_shape(hennepin_black) +
 
 .pull-right[
 
-```{r, echo = FALSE}
+```{r choropleth-show, echo = FALSE}
 tm_shape(hennepin_black) + 
   tm_polygons(col = "percent")
 ```
@@ -574,7 +576,7 @@ tm_shape(hennepin_black) +
 
 .pull-left[
 
-```{r, eval = FALSE}
+```{r custom-choropleth-code, eval = FALSE}
 tm_shape(hennepin_black, 
          projection = sf::st_crs(26915)) + 
   tm_polygons(col = "percent",
@@ -591,7 +593,7 @@ tm_shape(hennepin_black,
 
 .pull-right[
 
-```{r, echo = FALSE}
+```{r custom-choropleth-show, echo = FALSE}
 tm_shape(hennepin_black, 
          projection = sf::st_crs(26915)) + 
   tm_polygons(col = "percent",
@@ -620,7 +622,7 @@ tm_shape(hennepin_black,
 
 .pull-left[
 
-```{r, eval = FALSE}
+```{r jenks-code, eval = FALSE}
 tm_shape(hennepin_black, 
          projection = sf::st_crs(26915)) + 
   tm_polygons(col = "percent",
@@ -638,7 +640,7 @@ tm_shape(hennepin_black,
 
 .pull-right[
 
-```{r, echo = FALSE}
+```{r jenks-show, echo = FALSE}
 tm_shape(hennepin_black, 
          projection = sf::st_crs(26915)) + 
   tm_polygons(col = "percent",
@@ -662,7 +664,7 @@ tm_shape(hennepin_black,
 
 * Implemented in tmap with `tm_bubbles()`
 
-```{r}
+```{r bubbles-code}
 symbol_map <- tm_shape(hennepin_black) + 
   tm_polygons() + 
   tm_bubbles(size = "estimate", alpha = 0.5, 
@@ -671,7 +673,7 @@ symbol_map <- tm_shape(hennepin_black) +
 
 ---
 
-```{r}
+```{r bubbles-map}
 symbol_map
 ```
 
@@ -681,7 +683,7 @@ symbol_map
 
 * `tm_facets()` allows for comparative small multiples maps.  It works well with long-form spatial data returned by tidycensus
 
-```{r}
+```{r facet-map-code}
 facet_map <- tm_shape(hennepin_race,
          projection = sf::st_crs(26915)) + 
   tm_facets(by = "variable", scale.factor = 4) + 
@@ -693,7 +695,7 @@ facet_map <- tm_shape(hennepin_race,
 
 ---
 
-```{r}
+```{r facet-map}
 facet_map
 ```
 
@@ -711,7 +713,7 @@ facet_map
 
 .pull-right[
 
-```{r, echo = FALSE, eval = FALSE}
+```{r generate-dots, echo = FALSE, eval = FALSE}
 groups <- unique(hennepin_race$variable)
 
 hennepin_dots <- map_df(groups, ~{
@@ -733,7 +735,7 @@ hennepin_dots <- map_df(groups, ~{
 
 ## Advanced example: dot-density mapping
 
-```{r, eval = FALSE}
+```{r plot-dots, eval = FALSE}
 tm_shape(hennepin_dots) +
   tm_dots(col = "group", palette = "Set1", size = 0.005)
 ```
@@ -742,10 +744,7 @@ tm_shape(hennepin_dots) +
 
 ## Mapping the entire US with `shift_geo`
 
-```{r}
-library(tidycensus)
-library(tidyverse)
-
+```{r shift-geo}
 us_median_age <- get_acs(geography = "state",
                          variables = "B01002_001",
                          year = 2019,
@@ -759,7 +758,7 @@ us_median_age
 
 ## Mapping the entire US with `shift_geo`
 
-```{r}
+```{r show-shift-geo}
 tm_shape(us_median_age) + 
   tm_polygons()
 ```
@@ -768,7 +767,7 @@ tm_shape(us_median_age) +
 
 ## Mapping the entire US with `shift_geo`
 
-```{r}
+```{r style-shift-geo}
 tm_shape(us_median_age) + 
   tm_polygons(col = "estimate", palette = "RdPu", title = "Median age") + 
   tm_layout(legend.outside = TRUE)
@@ -786,7 +785,7 @@ tm_shape(us_median_age) +
 
 * Recommendation: use `output = "wide"` for multi-variable datasets (easier to use in a desktop GIS)
 
-```{r, eval = FALSE}
+```{r write-shp, eval = FALSE}
 library(sf)
 
 st_write(dc_income, "data/dc_income.shp")
