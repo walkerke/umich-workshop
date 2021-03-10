@@ -56,7 +56,7 @@ wi_income <- get_acs(
   geography = "county", 
   variables = "B19013_001", 
   state = "WI",
-  year = 2019
+  year = 2016
 )
 
 wi_income
@@ -105,8 +105,8 @@ hhinc_wide
 ga_wide <- get_acs(
   geography = "county",
   state = "GA",
-  variables = c(medinc = "B19013_001",
-                medage = "B01002_001"),
+  variables = c(median_income = "B19013_001",
+                median_age = "B01002_001"),
   output = "wide"
 )
 

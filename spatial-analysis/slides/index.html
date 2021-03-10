@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Spatial Analysis of US Census Data in R</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Kyle Walker" />
+    <meta name="date" content="2021-03-11" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Spatial Analysis of US Census Data in R
+## Geometries, maps, and methods
+### Kyle Walker
+### March 11, 2021
+
+---
+
+
+
+
+
+
+## About me
+
+* Associate Professor of Geography at TCU 
+
+* Spatial data science researcher and consultant
+
+* R package developer: tidycensus, tigris, mapboxapi
+
+* Book coming this year: _Analyzing the US Census with R_
+  - These workshops are a sneak preview of the book's content!
+
+---
+
+## SSDAN workshop series
+
+* Today: spatial analysis and mapping in R
+
+* Last Thursday (March 4): an introduction to analyzing US Census data with tidycensus ([code](https://github.com/walkerke/umich-workshop/blob/main/census-data-in-r/code/part-1-code.R) | [video recording](https://www.youtube.com/watch?v=PnFJfuJ83NI))
+
+* Thursday, March 25: working with US Census microdata (PUMS) with R and tidycensus
+
+---
+
+## Today's agenda
+
+* Hour 1: An introduction to Census geometries and the tigris package
+
+* Hour 2: Mapping Census data in R
+
+* Hour 3: Spatial analysis of Census data with the sf package
+
+---
+class: middle, center, inverse
+
+## Part 1: An introduction to Census geometries and the tigris package
+
+---
+
+## US Census Geography
+
+&lt;img src=img/census_diagram.png style="width: 500px"&gt;
+
+.footnote[Source: [US Census Bureau](https://www2.census.gov/geo/pdfs/reference/geodiagram.pdf)]
+
+---
+
+## Census TIGER/Line shapefiles
+
+.pull-left[
+
+&lt;img src=img/tiger_logo.png style="width: 350px"&gt;
+
+]
+
+.pull-right[
+
+* TIGER: Topologically Integrated Geographic Encoding and Referencing database
+
+* High-quality series of geographic datasets released by the US Census Bureau
+
+* Distributed as _shapefiles_, a common GIS data format comprised of several related files
+
+]
+
+.footnote[Image source: [US Census Bureau](https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2020/TGRSHP2020_TechDoc.pdf)]
+---
+
+## A typical GIS workflow
+
+&lt;img src="img/co_counties.png" style="width: 800px"&gt;
+
+---
+
+## The __tigris__ R package
+
+.pull-left[
+&lt;img src="https://raw.githubusercontent.com/walkerke/tigris/master/tools/readme/tigris_sticker.png" style="width: 400px"&gt;
+]
+
+.pull-right[
+
+* R interface to the US Census Bureau's TIGER/Line shapefile FTP server
+
+* No API key necessary - just install the package and start using Census shapefiles in R!
+
+]
+
+---
+
+## Basic usage of tigris
+
+* To use tigris, call a function that corresponds to the Census geography you want, optionally by `state` or `county`, when appropriate
+
+
+```r
+or_counties &lt;- counties(state = "OR")
+
+or_counties
+```
+
+```
+## Simple feature collection with 36 features and 17 fields
+## geometry type:  MULTIPOLYGON
+## dimension:      XY
+## bbox:           xmin: -124.7035 ymin: 41.99208 xmax: -116.4633 ymax: 46.2991
+## geographic CRS: NAD83
+## First 10 features:
+##     STATEFP COUNTYFP COUNTYNS GEOID      NAME         NAMELSAD LSAD CLASSFP
+## 19       41      063 01155135 41063   Wallowa   Wallowa County   06      H1
+## 88       41      013 01155128 41013     Crook     Crook County   06      H1
+## 125      41      005 01155127 41005 Clackamas Clackamas County   06      H1
+## 173      41      007 01135846 41007   Clatsop   Clatsop County   06      H1
+## 204      41      035 01155134 41035   Klamath   Klamath County   06      H1
+## 222      41      049 01135860 41049    Morrow    Morrow County   06      H1
+## 279      41      029 01135853 41029   Jackson   Jackson County   06      H1
+## 320      41      051 01135861 41051 Multnomah Multnomah County   06      H1
+## 356      41      001 01135845 41001     Baker     Baker County   06      H1
+## 500      41      003 01155126 41003    Benton    Benton County   06      H1
+##     MTFCC CSAFP CBSAFP METDIVFP FUNCSTAT       ALAND    AWATER    INTPTLAT
+## 19  G4020  &lt;NA&gt;   &lt;NA&gt;     &lt;NA&gt;        A  8147835329  14191752 +45.5937530
+## 88  G4020   140  39260     &lt;NA&gt;        A  7715390842  21004473 +44.1630537
+## 125 G4020   440  38900     &lt;NA&gt;        A  4845035564  31872078 +45.1604934
+## 173 G4020  &lt;NA&gt;  11820     &lt;NA&gt;        A  2144872198 661629272 +46.0245094
+## 204 G4020  &lt;NA&gt;  28900     &lt;NA&gt;        A 15391639810 503686589 +42.6837613
+## 222 G4020  &lt;NA&gt;  25840     &lt;NA&gt;        A  5259046542  44372276 +45.4254956
+## 279 G4020   366  32780     &lt;NA&gt;        A  7208597903  46766412 +42.4116214
+## 320 G4020   440  38900     &lt;NA&gt;        A  1116560269  88220750 +45.5477107
+## 356 G4020  &lt;NA&gt;   &lt;NA&gt;     &lt;NA&gt;        A  7945996793  51832631 +44.7034268
+## 500 G4020   440  18700     &lt;NA&gt;        A  1748712549   7740248 +44.4938816
+##         INTPTLON                       geometry
+## 19  -117.1855796 MULTIPOLYGON (((-117.7475 4...
+## 88  -120.3715849 MULTIPOLYGON (((-121.0145 4...
+## 125 -122.1951274 MULTIPOLYGON (((-122.7437 4...
+## 173 -123.7050366 MULTIPOLYGON (((-124.0081 4...
+## 204 -121.6461682 MULTIPOLYGON (((-121.3165 4...
+## 222 -119.6023111 MULTIPOLYGON (((-119.9982 4...
+## 279 -122.6756106 MULTIPOLYGON (((-122.9512 4...
+## 320 -122.4173625 MULTIPOLYGON (((-122.8675 4...
+## 356 -117.6919334 MULTIPOLYGON (((-117.9462 4...
+## 500 -123.4246641 MULTIPOLYGON (((-123.182 44...
+```
+---
+
+
+```r
+plot(or_counties$geometry)
+```
+
+![](index_files/figure-html/basic-plot-1.png)&lt;!-- --&gt;
+
+---
+
+## The __sf__ package and simple feature geometry
+
+.pull-left[
+
+&lt;img src="https://user-images.githubusercontent.com/520851/34887433-ce1d130e-f7c6-11e7-83fc-d60ad4fae6bd.gif" style="width: 400px"&gt;
+
+]
+
+.pull-right[
+
+* The sf package implements a _simple features data model_ for vector spatial data in R
+
+* Vector geometries: _points_, _lines_, and _polygons_ stored in a list-column of a data frame
+
+* Allows for tidy spatial data analysis (coming in hour 3!)
+
+]
+
+---
+
+## Datasets available in tigris
+
+* __Legal entities__: units that have legal significance in the US (e.g. states, counties)
+
+* __Statistical entities__: units that are used to tabulate Census data but do not have legal standing (e.g. Census tracts or block groups)
+
+* __Geographic features__: other geographic datasets provided by the Census Bureau that are not used for demographic tabulation (e.g. roads, water)
+
+---
+
+## Example: statistical entities
+
+
+```r
+benton_tracts &lt;- tracts(state = "OR", county = "Benton")
+
+plot(benton_tracts$geometry)
+```
+
+![](index_files/figure-html/benton-tracts-1.png)&lt;!-- --&gt;
+
+---
+
+## Example: geographic features
+
+
+```r
+benton_roads &lt;- roads(state = "OR", county = "Benton")
+
+plot(benton_roads$geometry)
+```
+
+![](index_files/figure-html/benton-roads-1.png)&lt;!-- --&gt;
+
+---
+
+## Example: geographic features
+
+
+```r
+dc_landmarks &lt;- landmarks("DC", type = "point")
+
+plot(dc_landmarks$geometry)
+```
+
+![](index_files/figure-html/dc-landmarks-1.png)&lt;!-- --&gt;
+
+
+---
+
+## How tigris works
+
+When you call a tigris function, it does the following: 
+
+* _Downloads_ your data from the US Census Bureau website; 
+
+* _Stores_ your data in a temporary directory by default; 
+
+* _Loads_ your data into R as a simple features object using `sf::st_read()`
+
+* Recommended option: use `options(tigris_use_cache = TRUE)` to cache downloaded shapefiles and prevent having to re-download every time you use them
+
+---
+class: middle, center, inverse
+
+## tigris features and options
+
+---
+
+## Cartographic boundary shapefiles
+
+.pull-left[
+* Question I've received over the years: "Why does Michigan look so weird?"
+
+* The core TIGER/Line shapefiles include _water area_ that belongs to US states and counties
+
+]
+
+.pull-right[
+
+```r
+mi_counties &lt;- counties("MI")
+
+plot(mi_counties$geometry)
+```
+
+![](index_files/figure-html/michigan-tiger-1.png)&lt;!-- --&gt;
+]
+
+
+---
+
+## Cartographic boundary shapefiles
+
+
+.pull-left[
+* Use the argument `cb = TRUE` to obtain a _cartographic boundary shapefile_ pre-clipped to the US shoreline
+
+* For some geographies, highly generalized (1:5 million and 1:20 million) shapefiles are available with the `resolution` argument
+]
+
+.pull-right[
+
+```r
+mi_counties_cb &lt;- counties("MI", cb = TRUE)
+
+plot(mi_counties_cb$geometry)
+```
+
+![](index_files/figure-html/michigan-cb-1.png)&lt;!-- --&gt;
+]
+
+---
+
+## Understanding yearly differences in TIGER/Line files
+
+* Whereas legal entities change shape very rarely (but they do change!), statistical entities change with every decennial Census
+
+* tigris fetches Census shapefiles from 1990 up through 2020
+
+
+```r
+tarrant90 &lt;- tracts("TX", "Tarrant", cb = TRUE, year = 1990)
+tarrant00 &lt;- tracts("TX", "Tarrant", cb = TRUE, year = 2000)
+tarrant10 &lt;- tracts("TX", "Tarrant", cb = TRUE, year = 2010)
+# Cartographic boundary files not yet released for 2020
+tarrant20 &lt;- tracts("TX", "Tarrant", year = 2020)
+```
+---
+
+
+```r
+par(mfrow = c(2, 2))
+
+plot(tarrant90$geometry, main = "1990")
+plot(tarrant00$geometry, main = "2000")
+plot(tarrant10$geometry, main = "2010")
+plot(tarrant20$geometry, main = "2020")
+```
+
+![](index_files/figure-html/plot-yearly-data-1.png)&lt;!-- --&gt;
+
+---
+
+## Interactive viewing of data with __mapview__
+
+* The mapview package brings interactive spatial data viewing to R:
+
+
+```r
+library(mapview)
+
+mapview(tarrant20)
+```
+
+* As an extension, use the leafsync package to interactively compare two or more maps
+
+
+```r
+library(leafsync)
+
+sync(mapview(tarrant90), mapview(tarrant20))
+```
+
+---
+
+## Combining spatial datasets
+
+* The `map_*()` family of functions in the tidyverse's purrr package allows for iteration over values/datasets, which works well for assembly of regional or national objects
+
+
+```r
+library(tidyverse)
+
+state_codes &lt;- c(state.abb, "DC")
+
+us_bgs &lt;- map_df(state_codes, ~block_groups(state = .x, cb = TRUE))
+
+glimpse(us_bgs)
+```
+
+```
+## Rows: 217,453
+## Columns: 11
+## $ STATEFP  &lt;chr&gt; "01", "01", "01", "01", "01", "01", "01", "01", "01", "01", …
+## $ COUNTYFP &lt;chr&gt; "073", "025", "077", "055", "131", "055", "055", "015", "073…
+## $ TRACTCE  &lt;chr&gt; "012910", "957602", "011802", "010200", "034700", "010601", …
+## $ BLKGRPCE &lt;chr&gt; "1", "5", "2", "5", "1", "1", "2", "1", "1", "2", "2", "1", …
+## $ AFFGEOID &lt;chr&gt; "1500000US010730129101", "1500000US010259576025", "1500000US…
+## $ GEOID    &lt;chr&gt; "010730129101", "010259576025", "010770118022", "01055010200…
+## $ NAME     &lt;chr&gt; "1", "5", "2", "5", "1", "1", "2", "1", "1", "2", "2", "1", …
+## $ LSAD     &lt;chr&gt; "BG", "BG", "BG", "BG", "BG", "BG", "BG", "BG", "BG", "BG", …
+## $ ALAND    &lt;dbl&gt; 3671177, 5858511, 4693254, 2359614, 402854096, 11699694, 418…
+## $ AWATER   &lt;dbl&gt; 150769, 0, 4993, 0, 19530524, 1158709, 0, 6370, 0, 0, 25350,…
+## $ geometry &lt;MULTIPOLYGON [°]&gt; MULTIPOLYGON (((-86.75138 3..., MULTIPOLYGON ((…
+```
+---
+
+## US Census shapefiles and coordinate reference systems
+
+* _Coordinate reference system_ (CRS): how coordinates in your spatial data are referenced to the Earth's surface
+
+* Distinction: _geographic coordinate systems_ (longitude/latitude) and _projected coordinate systems_ (planar, commonly measured in meters or US feet)
+
+* CRS used by Census shapefiles: North American Datum of 1983 (EPSG code 4269)
+
+---
+
+
+```r
+library(sf)
+
+fl_counties &lt;- counties("FL", cb = TRUE)
+
+st_crs(fl_counties)
+```
+
+```
+## Coordinate Reference System:
+##   User input: NAD83 
+##   wkt:
+## GEOGCRS["NAD83",
+##     DATUM["North American Datum 1983",
+##         ELLIPSOID["GRS 1980",6378137,298.257222101,
+##             LENGTHUNIT["metre",1]]],
+##     PRIMEM["Greenwich",0,
+##         ANGLEUNIT["degree",0.0174532925199433]],
+##     CS[ellipsoidal,2],
+##         AXIS["latitude",north,
+##             ORDER[1],
+##             ANGLEUNIT["degree",0.0174532925199433]],
+##         AXIS["longitude",east,
+##             ORDER[2],
+##             ANGLEUNIT["degree",0.0174532925199433]],
+##     ID["EPSG",4269]]
+```
+---
+
+## Choosing a coordinate reference system
+
+* __crsuggest__ my _developmental_ R package for helping choose the right coordinate system transformation
+
+* To install: `remotes::install_github("walkerke/crsuggest")`
+
+* Two core functions: `suggest_crs()` for a table of CRS recommendations; `suggest_top_crs()` for a quick best match
+
+
+---
+
+## Choosing a coordinate reference system
+
+
+```r
+library(crsuggest)
+
+fl_crs &lt;- suggest_crs(fl_counties)
+
+glimpse(fl_crs)
+```
+
+```
+## Rows: 10
+## Columns: 7
+## $ area_code &lt;chr&gt; "1379", "1379", "1379", "1379", "2188", "2188", "2188", "21…
+## $ crs_type  &lt;chr&gt; "projected", "projected", "projected", "projected", "projec…
+## $ crs_code  &lt;chr&gt; "3086", "3087", "3513", "6439", "2237", "2778", "2882", "35…
+## $ crs_name  &lt;chr&gt; "NAD83 / Florida GDL Albers", "NAD83(HARN) / Florida GDL Al…
+## $ crs_gcs   &lt;chr&gt; "4269", "4152", "4759", "6318", "4269", "4152", "4152", "47…
+## $ crs_units &lt;chr&gt; "m", "m", "m", "m", "us-ft", "m", "us-ft", "m", "us-ft", "m"
+## $ crs_proj4 &lt;chr&gt; "+proj=aea +lat_0=24 +lon_0=-84 +lat_1=24 +lat_2=31.5 +x_0=…
+```
+
+---
+
+## CRS transformations
+
+* Use the `st_transform()` function in the sf package to perform coordinate reference system transformations with the appropriate EPSG code
+
+
+```r
+fl_projected &lt;- st_transform(fl_counties, crs = 3086)
+
+head(fl_projected)
+```
+
+```
+## Simple feature collection with 6 features and 9 fields
+## geometry type:  MULTIPOLYGON
+## dimension:      XY
+## bbox:           xmin: 83061.43 ymin: 130374.3 xmax: 788415.3 ymax: 780618.8
+## projected CRS:  NAD83 / Florida GDL Albers
+##     STATEFP COUNTYFP COUNTYNS       AFFGEOID GEOID         NAME LSAD      ALAND
+## 24       12      075 00295724 0500000US12075 12075         Levy   06 2896183010
+## 96       12      086 00295755 0500000US12086 12086   Miami-Dade   06 4920565755
+## 97       12      073 00306916 0500000US12073 12073         Leon   06 1727237331
+## 98       12      057 00295757 0500000US12057 12057 Hillsborough   06 2646772012
+## 99       12      083 00306922 0500000US12083 12083       Marion   06 4113978836
+## 100      12      113 00306914 0500000US12113 12113   Santa Rosa   06 2622050628
+##         AWATER                       geometry
+## 24   762935040 MULTIPOLYGON (((493790.2 56...
+## 96  1376144237 MULTIPOLYGON (((783767.2 17...
+## 97    90397079 MULTIPOLYGON (((331309.3 70...
+## 98   631505816 MULTIPOLYGON (((555139.1 42...
+## 99   192297049 MULTIPOLYGON (((542215.2 56...
+## 100  418020790 MULTIPOLYGON (((83267.92 76...
+```
+
+---
+
+## Part 1 exercises
+
+* Give tigris a try for yourselves!  [Explore the available geographies in the tigris documentation](https://github.com/walkerke/tigris) and fetch data for a state and/or county of your choosing.  Plot the result with `plot()` or with `mapview()`.  
+
+---
+class: middle, center, inverse
+
+## Part 2: Mapping US Census data in R
+
+---
+
+## Typical Census GIS workflows
+
+Traditionally, getting "spatial" Census data requires: 
+
+--
+
+* Fetching shapefiles from the Census website;
+
+--
+
+* Downloading a CSV of data, cleaning/formatting it;
+
+--
+
+* Loading geometries and data into your GIS of choice;
+
+--
+
+* Aligning key fields in your GIS and joining your data
+
+---
+
+## Geometry in tidycensus
+
+* tidycensus takes care of this entire process with the argument `geometry = TRUE`
+
+
+```r
+library(tidycensus)
+options(tigris_use_cache = TRUE)
+
+dc_income &lt;- get_acs(geography = "tract", 
+                     variables = c(hhincome = "B19013_001"), 
+                     state = "DC", 
+                     geometry = TRUE)
+```
+
+---
+
+
+```r
+dc_income
+```
+
+```
+## Simple feature collection with 179 features and 5 fields
+## geometry type:  POLYGON
+## dimension:      XY
+## bbox:           xmin: -77.11976 ymin: 38.79164 xmax: -76.9094 ymax: 38.99511
+## geographic CRS: NAD83
+## First 10 features:
+##          GEOID                                                           NAME
+## 1  11001009509 Census Tract 95.09, District of Columbia, District of Columbia
+## 2  11001010100   Census Tract 101, District of Columbia, District of Columbia
+## 3  11001008301 Census Tract 83.01, District of Columbia, District of Columbia
+## 4  11001002101 Census Tract 21.01, District of Columbia, District of Columbia
+## 5  11001004100    Census Tract 41, District of Columbia, District of Columbia
+## 6  11001008001 Census Tract 80.01, District of Columbia, District of Columbia
+## 7  11001002900    Census Tract 29, District of Columbia, District of Columbia
+## 8  11001005600    Census Tract 56, District of Columbia, District of Columbia
+## 9  11001007605 Census Tract 76.05, District of Columbia, District of Columbia
+## 10 11001005900    Census Tract 59, District of Columbia, District of Columbia
+##    variable estimate   moe                       geometry
+## 1  hhincome    75515 19621 POLYGON ((-77.00201 38.9510...
+## 2  hhincome    94861 16089 POLYGON ((-77.03653 38.9056...
+## 3  hhincome   138487 30838 POLYGON ((-77.00352 38.9000...
+## 4  hhincome    67984 11327 POLYGON ((-77.02803 38.9610...
+## 5  hhincome   156625 27218 POLYGON ((-77.05832 38.9177...
+## 6  hhincome   154423 28910 POLYGON ((-76.99025 38.8973...
+## 7  hhincome   116875 20769 POLYGON ((-77.03273 38.9341...
+## 8  hhincome    79357 16304 POLYGON ((-77.05779 38.9025...
+## 9  hhincome    38659  7543 POLYGON ((-76.98436 38.8666...
+## 10 hhincome    98750 21107 POLYGON ((-77.01901 38.8946...
+```
+
+---
+
+## Basic mapping with base plotting
+
+
+```r
+plot(dc_income["estimate"])
+```
+
+![](index_files/figure-html/plot-geometry-1.png)&lt;!-- --&gt;
+
+---
+
+## Basic mapping with ggplot2
+
+* `geom_sf()`: ggplot2 method to use simple features in your data visualization workflows
+
+
+```r
+library(tidyverse)
+
+dc_map &lt;- ggplot(dc_income, aes(fill = estimate)) + 
+  geom_sf()
+```
+
+---
+
+
+```r
+dc_map
+```
+
+![](index_files/figure-html/plot-geom-sf-1.png)&lt;!-- --&gt;
+
+---
+class: middle, center, inverse
+
+## Mapping Census data with tmap
+
+---
+
+## The tmap package
+
+.pull-left[
+
+&lt;img src="https://user-images.githubusercontent.com/2444081/106523217-12c12880-64e1-11eb-8d55-01442d535400.png" style="width: 350px"&gt;
+
+]
+
+.pull-right[
+
+* Comprehensive package for thematic mapping in R
+
+* ggplot2-like syntax, but designed in a way to feel friendly to GIS cartographers coming to R for mapping
+
+]
+
+---
+
+## Example data
+
+* Our example: comparing the distributions of racial and ethnic groups in Hennepin County, Minnesota (Minneapolis)
+
+
+```r
+hennepin_race &lt;- get_acs(
+  geography = "tract",
+  state = "MN",
+  county = "Hennepin",
+  variables = c(White = "B03002_003",
+                Black = "B03002_004",
+                Native = "B03002_005",
+                Asian = "B03002_006",
+                Hispanic = "B03002_012"),
+  summary_var = "B03002_001",
+  geometry = TRUE
+) %&gt;%
+  mutate(percent = 100 * (estimate / summary_est))
+```
+
+---
+
+
+```r
+glimpse(hennepin_race)
+```
+
+```
+## Rows: 1,495
+## Columns: 9
+## $ GEOID       &lt;chr&gt; "27053103900", "27053103900", "27053103900", "27053103900…
+## $ NAME        &lt;chr&gt; "Census Tract 1039, Hennepin County, Minnesota", "Census …
+## $ variable    &lt;chr&gt; "White", "Black", "Native", "Asian", "Hispanic", "White",…
+## $ estimate    &lt;dbl&gt; 2940, 372, 10, 504, 214, 4951, 175, 77, 24, 250, 4757, 75…
+## $ moe         &lt;dbl&gt; 421, 276, 15, 153, 76, 402, 277, 85, 30, 175, 327, 57, 34…
+## $ summary_est &lt;dbl&gt; 4221, 4221, 4221, 4221, 4221, 5753, 5753, 5753, 5753, 575…
+## $ summary_moe &lt;dbl&gt; 447, 447, 447, 447, 447, 316, 316, 316, 316, 316, 286, 28…
+## $ geometry    &lt;MULTIPOLYGON [°]&gt; MULTIPOLYGON (((-93.23693 4..., MULTIPOLYGON…
+## $ percent     &lt;dbl&gt; 69.6517413, 8.8130775, 0.2369107, 11.9402985, 5.0698887, …
+```
+---
+
+## Basic plotting with tmap
+
+.pull-left[
+
+* `tm_shape()` initializes the shape; `tm_polygons()` shows the polygons for quick display
+
+
+```r
+library(tmap)
+
+hennepin_black &lt;- filter(hennepin_race, 
+                         variable == "Black")
+
+tm_shape(hennepin_black) + 
+  tm_polygons() 
+```
+
+]
+
+.pull-right[
+
+![](index_files/figure-html/polygons-map-1.png)&lt;!-- --&gt;
+
+]
+
+
+
+---
+
+## Choropleth mapping with tmap
+
+.pull-left[
+
+* _Choropleth maps_ show statistical variation through color or shading of areas
+
+* They generally should be used with _normalized data_ such as rates or percentages, not counts
+
+
+```r
+tm_shape(hennepin_black) + 
+  tm_polygons(col = "percent")
+```
+
+]
+
+.pull-right[
+
+![](index_files/figure-html/choropleth-show-1.png)&lt;!-- --&gt;
+
+]
+
+
+---
+
+## Modifying choropleth options
+
+* Color palettes can be modified with the `palette` parameter, which accepts ColorBrewer and viridis palettes
+
+* If you've mapped with GIS software before, the `style` parameter implements various breaks methods, including `"equal"`, `"quantile"` and `"jenks"`
+
+---
+
+.pull-left[
+
+
+```r
+tm_shape(hennepin_black, 
+         projection = sf::st_crs(26915)) + 
+  tm_polygons(col = "percent",
+          style = "quantile",
+          n = 7,
+          palette = "Purples",
+          title = "ACS estimate") + 
+  tm_layout(title = "Percent Black\nby Census tract",
+            frame = FALSE,
+            legend.outside = TRUE)
+```
+
+]
+
+.pull-right[
+
+![](index_files/figure-html/custom-choropleth-show-1.png)&lt;!-- --&gt;
+
+]
+
+
+
+---
+
+## tmap choropleth tips and tricks
+
+* Use `tmaptools::palette_explorer()` to interactively browse color options
+
+* Use the option `tm_layout(legend.hist = TRUE)` to display the distribution of data values among classes
+
+---
+
+.pull-left[
+
+
+```r
+tm_shape(hennepin_black, 
+         projection = sf::st_crs(26915)) + 
+  tm_polygons(col = "percent",
+          style = "jenks",
+          n = 7,
+          palette = "viridis",
+          title = "ACS estimate",
+          legend.hist = TRUE) + 
+  tm_layout(title = "Percent Black population\nby Census tract",
+            frame = FALSE,
+            legend.outside = TRUE)
+```
+
+]
+
+.pull-right[
+
+![](index_files/figure-html/jenks-show-1.png)&lt;!-- --&gt;
+
+]
+
+---
+
+## Graduated symbol maps
+
+* Graduated symbols: using _size_ of a symbol to represent statistical variation on a map
+
+* Implemented in tmap with `tm_bubbles()`
+
+
+```r
+symbol_map &lt;- tm_shape(hennepin_black) + 
+  tm_polygons() + 
+  tm_bubbles(size = "estimate", alpha = 0.5, 
+             col = "navy")
+```
+
+---
+
+
+```r
+symbol_map
+```
+
+![](index_files/figure-html/bubbles-map-1.png)&lt;!-- --&gt;
+
+---
+
+## Faceted mapping
+
+* `tm_facets()` allows for comparative small multiples maps.  It works well with long-form spatial data returned by tidycensus
+
+
+```r
+facet_map &lt;- tm_shape(hennepin_race,
+         projection = sf::st_crs(26915)) + 
+  tm_facets(by = "variable", scale.factor = 4) + 
+  tm_fill(col = "percent",
+          style = "quantile",
+          n = 7,
+          palette = "Blues")
+```
+
+---
+
+
+```r
+facet_map
+```
+
+![](index_files/figure-html/facet-map-1.png)&lt;!-- --&gt;
+
+---
+
+## Advanced example: dot-density mapping
+
+.pull-left[
+
+* Dot-density maps scatter dots relative to data values, and are good for showing within-polygon diversity
+
+* To generate points for dot-density mapping, points should be proportionally sampled in polygons relative to data values then randomized with `slice_sample()`
+
+]
+
+.pull-right[
+
+
+```r
+groups &lt;- unique(hennepin_race$variable)
+
+hennepin_dots &lt;- map_df(groups, ~{
+  hennepin_race %&gt;%
+    filter(variable == .x) %&gt;%
+    st_transform(26915) %&gt;%
+    mutate(est50 = as.integer(estimate / 50)) %&gt;%
+    st_sample(size = .$est50, exact = TRUE) %&gt;%
+    st_sf() %&gt;%
+    mutate(group = .x)
+}) %&gt;%
+  slice_sample(prop = 1)
+```
+
+]
+
+
+---
+
+
+```r
+tm_shape(hennepin_dots) +
+  tm_dots(col = "group", palette = "Set1", size = 0.005)
+```
+
+&lt;img src=img/hennepin_dots.png style="width: 600px"&gt;
+
+---
+
+## Mapping the entire US with `shift_geo`
+
+* The `shift_geo` parameter uses Bob Rudis's [albersusa geometries](https://github.com/hrbrmstr/albersusa) to shift and re-scale Alaska and Hawaii for thematic mapping
+
+
+```r
+us_median_age &lt;- get_acs(geography = "state",
+                         variables = "B01002_001",
+                         year = 2019,
+                         survey = "acs1",
+                         geometry = TRUE,
+                         shift_geo = TRUE)
+```
+---
+
+
+```r
+tm_shape(us_median_age) + tm_polygons()
+```
+
+![](index_files/figure-html/show-shift-geo-1.png)&lt;!-- --&gt;
+
+---
+
+
+```r
+tm_shape(us_median_age) + 
+  tm_polygons(col = "estimate", palette = "RdPu", title = "Median age") + 
+  tm_layout(legend.outside = TRUE)
+```
+
+![](index_files/figure-html/style-shift-geo-1.png)&lt;!-- --&gt;
+
+---
+
+## Interactive mapping
+
+* For quick interactive mapping, use the `zcol` parameter in `mapview()` or `tmap_mode("view")` in tmap
+
+* For customizable interactive mapping, check out the leaflet package and its integration with the Shiny framework for data dashboards
+
+
+```r
+library(mapview)
+
+mapview(dc_income, zcol = "estimate")
+```
+
+---
+
+## What if I still want to use a GIS?
+
+* No problem! Write out your data to a shapefile/GeoJSON/GeoPackage with `sf::st_write()` and load into your GIS of choice
+
+* Recommendation: use `output = "wide"` for multi-variable datasets (easier to use in a desktop GIS)
+
+
+```r
+library(sf)
+
+st_write(dc_income, "data/dc_income.shp")
+```
+
+
+---
+
+## Part 2 exercises
+
+Try making your own map with tmap!  
+
+* If you are just getting started with tidycensus/the tidyverse, make a race/ethnicity map by adapting the code provided in this section but for a different county.  
+
+* If you are comfortable with tidycensus at this stage, pick a different variable to map instead!
+
+---
+class: middle, center, inverse
+
+## Spatial analysis of US Census data with the sf package
+
+---
+
+## Spatial analysis in a GIS
+
+.pull-left[
+
+Some typical terminology for spatial analysis in a desktop GIS context: 
+
+* Select by Attributes
+
+* Select by Location
+
+* Spatial Join
+
+* Geoprocessing (Clip, Dissolve, Union, etc.)
+
+]
+
+.pull-right[
+
+&lt;img src="img/co_dissolve.png" style="width: 500px"&gt;
+
+]
+
+---
+
+## sf: a tidy data model for spatial analysis
+
+* sf's data model is designed for integration within tidyverse data wrangling workflows
+
+* Many tidyverse methods (including those presented last week) work on sf objects
+
+* Geometries are "sticky" and not lost after performing data wrangling operations
+
+* The `st_*()` family of functions help you complete many common GIS tasks
+
+---
+
+## Topic: COVID-19 vaccinations in Texas
+
+* Of interest: how do COVID-19 vaccination rates vary geographically in Texas?
+
+* The most granular geography available is the zip code, which we approximate with the Zip Code Tabulation Area (ZCTA)
+
+* Data should be normalized by population given wide variations in ZCTA populations
+
+---
+
+## Data setup
+
+* [Up-to-date vaccination data available from the Texas Department of State Health Services](https://dshs.texas.gov/coronavirus/AdditionalData.aspx); I've cleaned up the Excel spreadsheet for us
+
+
+```r
+library(tidyverse)
+
+tx_vaccinations &lt;- read_rds("spatial-analysis/data/tx_vaccinations.rds")
+
+glimpse(tx_vaccinations)
+```
+
+```
+## Rows: 2,487
+## Columns: 4
+## $ zip_code           &lt;chr&gt; "73301", "73344", "73960", "75001", "75002", "7500…
+## $ total_vaccinations &lt;dbl&gt; 102, NA, 13, 3526, 18830, 9806, 13794, 4103, 8983,…
+## $ first_dose         &lt;dbl&gt; 55, NA, 7, 2328, 11693, 6487, 9163, 2545, 5774, 64…
+## $ fully_vaccinated   &lt;dbl&gt; 47, NA, NA, 1202, 7155, 3333, 4657, 1561, 3221, 33…
+```
+
+---
+
+## Data setup
+
+.pull-left[
+
+* Given that vaccines are only administered to patients age 16 and up, we can acquire appropriate normalization data from the ACS Data Profile
+
+
+```r
+library(tidycensus)
+options(tigris_use_cache = TRUE)
+
+pop16up &lt;- get_acs(
+  geography = "zcta",
+  variables = "DP03_0001",
+  geometry = TRUE,
+  state = "TX"
+)
+```
+
+]
+
+.pull-right[
+
+
+```r
+library(tmap)
+
+tm_shape(pop16up) + tm_fill(col = "estimate")
+```
+
+![](index_files/figure-html/map-normalization-pop-1.png)&lt;!-- --&gt;
+]
+
+---
+
+## "Joining" geometries and attributes
+
+* dplyr's `*_join()` family of functions help analysts merge tabular data to sf objects
+
+
+```r
+tx_vacc_rate &lt;- pop16up %&gt;%
+  left_join(tx_vaccinations, by = c("GEOID" = "zip_code")) %&gt;%
+  mutate(pct_vaccinated = 100 * (total_vaccinations / estimate)) %&gt;%
+  mutate(pct_vaccinated = ifelse(pct_vaccinated &gt; 100, NA, pct_vaccinated))
+```
+
+---
+
+
+```r
+tm_shape(tx_vacc_rate) + tm_fill(col = "pct_vaccinated", palette = "Reds")
+```
+
+![](index_files/figure-html/map-rates-1.png)&lt;!-- --&gt;
+
+---
+
+## Selecting data by attributes
+
+* dplyr's `filter()` works on spatial data and allows for targeted visualization by attribute values
+
+
+```r
+dallas_area &lt;- tx_vacc_rate %&gt;%
+  filter(str_sub(GEOID, 1, 2) == "75")
+
+above_40 &lt;- dallas_area %&gt;%
+  filter(pct_vaccinated &gt;= 40)
+```
+
+---
+
+
+```r
+tm_shape(dallas_area) + tm_polygons() + 
+  tm_shape(above_40) + tm_polygons(col = "navy") 
+```
+
+![](index_files/figure-html/above-40-1.png)&lt;!-- --&gt;
+
+---
+class: middle, center, inverse
+
+## Spatial overlay
+
+---
+
+## Spatial overlay
+
+* Common question: how do local characteristics vary within and between metropolitan areas?
+
+* Methods: _spatial filtering_ ("select by location" in a GIS context) and _spatial joins_
+
+* tigris geometries work well for a wide range of Census overlays
+
+
+```r
+dfw_metro &lt;- core_based_statistical_areas(cb = TRUE) %&gt;%
+  filter(str_detect(NAME, "Dallas"))
+```
+
+---
+
+## Spatial filters
+
+* The sf package implements spatial filters using both base R notation and the tidyverse-style `st_filter()` function
+
+For example, 
+
+
+```r
+library(sf)
+
+dfw_zips &lt;- tx_vacc_rate[dfw_metro, ]
+```
+
+is equivalent to: 
+
+
+```r
+dfw_zips &lt;- st_filter(tx_vacc_rate, dfw_metro)
+```
+
+---
+
+
+```r
+tm_shape(dfw_zips) + 
+  tm_polygons(col = "pct_vaccinated", palette = "Reds") + 
+  tm_layout(legend.outside = TRUE)
+```
+
+![](index_files/figure-html/plot-filter-1.png)&lt;!-- --&gt;
+
+---
+
+## Spatial predicates
+
+* The default _spatial predicate_, `st_intersects()`, defines the spatial relationship as any overlap between the two layers
+
+* Many other spatial predicates are available ([see the sf documentation for more examples](https://r-spatial.github.io/sf/reference/geos_binary_pred.html))
+
+* Example: ZCTAs that fall entirely within the Dallas-Fort Worth metro boundary (do not cross the border)
+
+
+```r
+dfw_zips_within &lt;- st_filter(tx_vacc_rate, dfw_metro, .predicate = st_within)
+```
+
+---
+
+
+```r
+tm_shape(dfw_zips_within) + 
+  tm_polygons(col = "pct_vaccinated", palette = "Reds") + 
+  tm_layout(legend.outside = TRUE)
+```
+
+![](index_files/figure-html/plot-within-1.png)&lt;!-- --&gt;
+
+---
+
+## Spatial joins
+
+.pull-left[
+
+* Spatial joins transfer attributes from one spatial dataset to another based on shared spatial relationships
+
+* Like spatial filters, spatial joins rely on spatial predicates to determine spatial relationships between features
+
+* Implemented in the sf package with `st_join()`
+
+]
+
+.pull-right[
+
+
+```r
+tx_metros &lt;- core_based_statistical_areas(cb = TRUE) %&gt;%
+  filter(GEOID %in% c("19100", "26420", "41700", "12420")) %&gt;%
+  select(metro_name = NAME)
+
+zips_by_metro &lt;- tx_vacc_rate %&gt;%
+  st_join(tx_metros, left = FALSE)
+```
+]
+
+---
+
+
+```r
+glimpse(zips_by_metro)
+```
+
+```
+## Rows: 827
+## Columns: 11
+## $ GEOID              &lt;chr&gt; "77414", "75287", "78621", "76201", "78150", "7861…
+## $ NAME               &lt;chr&gt; "ZCTA5 77414", "ZCTA5 75287", "ZCTA5 78621", "ZCTA…
+## $ variable           &lt;chr&gt; "DP03_0001", "DP03_0001", "DP03_0001", "DP03_0001"…
+## $ estimate           &lt;dbl&gt; 18595, 45980, 18275, 27079, 37, 9643, 1121, 12809,…
+## $ moe                &lt;dbl&gt; 626, 883, 1288, 1116, 24, 1398, 271, 649, 973, 406…
+## $ total_vaccinations &lt;dbl&gt; 3531, 9042, 4069, 4429, NA, 1953, 60, 4447, 9240, …
+## $ first_dose         &lt;dbl&gt; 2433, 5745, 2984, 2860, NA, 1444, 40, 2970, 5830, …
+## $ fully_vaccinated   &lt;dbl&gt; 1099, 3307, 1088, 1575, NA, 510, 20, 1486, 3416, 4…
+## $ pct_vaccinated     &lt;dbl&gt; 18.988976, 19.665072, 22.265390, 16.355848, NA, 20…
+## $ metro_name         &lt;chr&gt; "Houston-The Woodlands-Sugar Land, TX", "Dallas-Fo…
+## $ geometry           &lt;MULTIPOLYGON [°]&gt; MULTIPOLYGON (((-96.07715 2..., MULTI…
+```
+---
+
+## Comparative visualization
+
+
+```r
+ggplot(zips_by_metro) + 
+  geom_density(aes(x = pct_vaccinated), color = "navy", fill = "navy", 
+               alpha = 0.4) + 
+  theme_minimal() + 
+  facet_wrap(~metro_name) + 
+  labs(title = "Percent of population age 16+ vaccinated for COVID-19",
+       subtitle = "ZCTAs, largest metropolitan areas in Texas",
+       y = "Kernel density estimate",
+       x = "Percent receiving at least one vaccine dose")
+```
+
+---
+
+&lt;img src=img/compare_by_metro.png style="width: 800px"&gt;
+
+---
+class: middle, center, inverse
+
+## Advanced application: spatial clustering and group-wise spatial data analysis
+
+---
+
+## The spdep package
+
+.pull-left[
+
+* spdep: the workhorse R package for both exploratory spatial data analysis and spatial modeling
+
+* Key concept: _spatial neighbors_
+
+* spdep helps model spatial relationships for clustering analysis, spatial lags &amp; smoothing, and spatially-aware modeling
+
+]
+
+.pull-right[
+
+&lt;img src=img/neighbors.png style="width: 450px"&gt;
+
+]
+
+---
+
+## Data setup
+
+* Research question: can we identify contiguous "regions" in Wayne County, Michigan by age, income, and education?
+
+
+```r
+input_tracts &lt;- get_acs(
+  geography = "tract",
+  variables = c(median_age = "B01002_001",
+                median_income = "B19013_001",
+                pct_college = "DP02_0068P"),
+  state = "MI",
+  county = "Wayne",
+  geometry = TRUE,
+  output = "wide"
+) %&gt;%
+  select(-ends_with("M")) %&gt;%
+  na.omit()
+```
+---
+
+## The SKATER algorithm
+
+.pull-left[
+
+* General concept: unsupervised clustering with spatial constraints
+
+* SKATER: Spatial "Kluster" Analysis by Tree Edge Removal
+
+* Uses minimum spanning trees to minimize within-group dissimilarity while ensuring that groups are spatially contiguous
+
+]
+
+.pull-right[
+
+
+```r
+library(spdep)
+
+input_vars &lt;- input_tracts %&gt;%
+  select(median_ageE:pct_collegeE) %&gt;%
+  st_drop_geometry() %&gt;%
+  scale() %&gt;%
+  as.data.frame()
+
+nb &lt;- poly2nb(input_tracts)
+costs &lt;- nbcosts(nb, input_vars)
+weights &lt;- nb2listw(nb, costs, style = "B")
+```
+
+]
+
+---
+
+## Regionalization with SKATER
+
+
+```r
+mst &lt;- mstree(weights)
+
+regions &lt;- skater(mst[,1:2], input_vars, ncuts = 6)
+
+input_tracts$group &lt;- as.character(regions$group)
+```
+
+---
+
+
+```r
+tm_shape(input_tracts) + tm_polygons("group", palette = "Set1")
+```
+
+![](index_files/figure-html/plot-groups-1.png)&lt;!-- --&gt;
+
+---
+
+## Group-wise operations on spatial data
+
+* dplyr's `group_by()` and `summarize()`, used together on a spatial object, implements an analogous operation to a _Dissolve_ in a GIS
+
+
+```r
+wayne_regions &lt;- input_tracts %&gt;%
+  group_by(group) %&gt;%
+  summarize(across(.cols = where(is.numeric),
+                   .fns = mean))
+```
+
+---
+
+
+```r
+tm_shape(wayne_regions) + tm_polygons(col = "group", palette = "Set1")
+```
+
+![](index_files/figure-html/wayne-regions-map-1.png)&lt;!-- --&gt;
+
+---
+
+
+```r
+wayne_regions
+```
+
+```
+## Simple feature collection with 7 features and 4 fields
+## geometry type:  GEOMETRY
+## dimension:      XY
+## bbox:           xmin: -83.55191 ymin: 42.03334 xmax: -82.87023 ymax: 42.45101
+## geographic CRS: NAD83
+## # A tibble: 7 x 5
+##   group median_ageE median_incomeE pct_collegeE                         geometry
+##   &lt;chr&gt;       &lt;dbl&gt;          &lt;dbl&gt;        &lt;dbl&gt;                   &lt;GEOMETRY [°]&gt;
+## 1 1            35.9         30436.         12.7 POLYGON ((-83.14968 42.24173, -…
+## 2 2            40.5         57190.         19.7 MULTIPOLYGON (((-83.19159 42.03…
+## 3 3            46.2        127539.         67.7 POLYGON ((-82.91176 42.3793, -8…
+## 4 4            40.2         61136.         28.6 MULTIPOLYGON (((-83.40908 42.33…
+## 5 5            33.2         47426.         57.1 MULTIPOLYGON (((-83.06632 42.32…
+## 6 6            42.1        102535.         55.8 POLYGON ((-83.44288 42.3086, -8…
+## 7 7            48.8        102002.         50.8 POLYGON ((-83.47005 42.39107, -…
+```
+
+---
+
+## Part 3 exercises
+
+Try putting together a spatial analysis workflow yourself!  Acquire data on median household income by Census tract for Texas: 
+
+
+```r
+texas_income &lt;- get_acs(
+  geography = "tract",
+  variables = "B19013_001",
+  state = "TX",
+  geometry = TRUE
+)
+```
+
+Answer the following: 
+
+* How does median household income vary geographically in the Austin metropolitan area?  Show this on a map.  
+
+* How does the distribution of median household incomes by Census tract vary among the four largest metro areas in Texas?  
+
+---
+class: middle, center, inverse
+
+## Thank you!
+
+
+
+
+
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
