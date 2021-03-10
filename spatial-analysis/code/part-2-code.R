@@ -408,6 +408,7 @@ input_tracts <- get_acs(
 
 ## ----setup-skater--------------------------------------------------------------------------------------
 library(spdep)
+set.seed(123456)
 
 input_vars <- input_tracts %>%
   select(median_ageE:pct_collegeE) %>%
