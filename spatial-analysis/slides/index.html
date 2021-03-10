@@ -41,7 +41,7 @@ class: center, middle, inverse, title-slide
 
 * Today: spatial analysis and mapping in R
 
-* Last Thursday (March 4): an introduction to analyzing US Census data with tidycensus 
+* Last Thursday (March 4): an introduction to analyzing US Census data with tidycensus ([code](https://github.com/walkerke/umich-workshop/blob/main/census-data-in-r/code/part-1-code.R) | [video recording](https://www.youtube.com/watch?v=PnFJfuJ83NI))
 
 * Thursday, March 25: working with US Census microdata (PUMS) with R and tidycensus
 
@@ -72,13 +72,28 @@ class: middle, center, inverse
 
 ## Census TIGER/Line shapefiles
 
-{info here}
+.pull-left[
 
+&lt;img src=img/tiger_logo.png style="width: 350px"&gt;
+
+]
+
+.pull-right[
+
+* TIGER: Topologically Integrated Geographic Encoding and Referencing database
+
+* High-quality series of geographic datasets released by the US Census Bureau
+
+* Distributed as _shapefiles_, a common GIS data format comprised of several related files
+
+]
+
+.footnote[Image source: [US Census Bureau](https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2020/TGRSHP2020_TechDoc.pdf)]
 ---
 
 ## A typical GIS workflow
 
-{image from QGIS here}
+&lt;img src="img/co_counties.png" style="width: 800px"&gt;
 
 ---
 
@@ -165,7 +180,7 @@ plot(or_counties$geometry)
 
 .pull-left[
 
-&lt;img src="https://user-images.githubusercontent.com/520851/34887433-ce1d130e-f7c6-11e7-83fc-d60ad4fae6bd.gif" style="width: 300px"&gt;
+&lt;img src="https://user-images.githubusercontent.com/520851/34887433-ce1d130e-f7c6-11e7-83fc-d60ad4fae6bd.gif" style="width: 400px"&gt;
 
 ]
 
@@ -327,6 +342,8 @@ plot(tarrant20$geometry, main = "2020")
 
 ## Interactive viewing of data with __mapview__
 
+* The mapview package brings interactive spatial data viewing to R:
+
 
 ```r
 library(mapview)
@@ -334,9 +351,7 @@ library(mapview)
 mapview(tarrant20)
 ```
 
----
-
-## Comparing shapes interactively
+* As an extension, use the leafsync package to interactively compare two or more maps
 
 
 ```r
@@ -348,6 +363,8 @@ sync(mapview(tarrant90), mapview(tarrant20))
 ---
 
 ## Combining spatial datasets
+
+* The `map_*()` family of functions in the tidyverse's purrr package allows for iteration over values/datasets, which works well for assembly of regional or national objects
 
 
 ```r
@@ -490,7 +507,7 @@ head(fl_projected)
 
 ## Part 1 exercises
 
-{exercises here}
+* Give tigris a try for yourselves!  [Explore the available geographies in the tigris documentation](https://github.com/walkerke/tigris) and fetch data for a state and/or county of your choosing.  Plot the result with `plot()` or with `mapview()`.  
 
 ---
 class: middle, center, inverse
@@ -501,26 +518,23 @@ class: middle, center, inverse
 
 ## Typical Census GIS workflows
 
-.pull-left[
-
 Traditionally, getting "spatial" Census data requires: 
+
+--
 
 * Fetching shapefiles from the Census website;
 
+--
+
 * Downloading a CSV of data, cleaning/formatting it;
+
+--
 
 * Loading geometries and data into your GIS of choice;
 
+--
+
 * Aligning key fields in your GIS and joining your data
-
-]
-
-.pull-right[
-
-{image from QGIS here}
-
-
-]
 
 ---
 
@@ -752,7 +766,7 @@ tm_shape(hennepin_black,
           n = 7,
           palette = "Purples",
           title = "ACS estimate") + 
-  tm_layout(title = "Percent Black population\nby Census tract",
+  tm_layout(title = "Percent Black\nby Census tract",
             frame = FALSE,
             legend.outside = TRUE)
 ```
@@ -868,13 +882,25 @@ facet_map
 .pull-right[
 
 
+```r
+groups &lt;- unique(hennepin_race$variable)
+
+hennepin_dots &lt;- map_df(groups, ~{
+  hennepin_race %&gt;%
+    filter(variable == .x) %&gt;%
+    st_transform(26915) %&gt;%
+    mutate(est50 = as.integer(estimate / 50)) %&gt;%
+    st_sample(size = .$est50, exact = TRUE) %&gt;%
+    st_sf() %&gt;%
+    mutate(group = .x)
+}) %&gt;%
+  slice_sample(prop = 1)
+```
 
 ]
 
 
 ---
-
-## Advanced example: dot-density mapping
 
 
 ```r
@@ -882,9 +908,13 @@ tm_shape(hennepin_dots) +
   tm_dots(col = "group", palette = "Set1", size = 0.005)
 ```
 
+&lt;img src=img/hennepin_dots.png style="width: 600px"&gt;
+
 ---
 
 ## Mapping the entire US with `shift_geo`
+
+* The `shift_geo` parameter uses Bob Rudis's [albersusa geometries](https://github.com/hrbrmstr/albersusa) to shift and re-scale Alaska and Hawaii for thematic mapping
 
 
 ```r
@@ -894,55 +924,17 @@ us_median_age &lt;- get_acs(geography = "state",
                          survey = "acs1",
                          geometry = TRUE,
                          shift_geo = TRUE)
-
-us_median_age
-```
-
-```
-## Simple feature collection with 51 features and 5 fields
-## geometry type:  MULTIPOLYGON
-## dimension:      XY
-## bbox:           xmin: -2100000 ymin: -2500000 xmax: 2516374 ymax: 732103.3
-## CRS:            +proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs
-## First 10 features:
-##    GEOID                 NAME   variable estimate moe
-## 1     04              Arizona B01002_001     38.3 0.2
-## 2     05             Arkansas B01002_001     38.8 0.2
-## 3     06           California B01002_001     37.0 0.1
-## 4     08             Colorado B01002_001     37.1 0.1
-## 5     09          Connecticut B01002_001     41.2 0.2
-## 6     11 District of Columbia B01002_001     34.3 0.2
-## 7     13              Georgia B01002_001     37.2 0.1
-## 8     17             Illinois B01002_001     38.6 0.1
-## 9     18              Indiana B01002_001     38.0 0.2
-## 10    22            Louisiana B01002_001     37.7 0.2
-##                          geometry
-## 1  MULTIPOLYGON (((-1111066 -8...
-## 2  MULTIPOLYGON (((557903.1 -1...
-## 3  MULTIPOLYGON (((-1853480 -9...
-## 4  MULTIPOLYGON (((-613452.9 -...
-## 5  MULTIPOLYGON (((2226838 519...
-## 6  MULTIPOLYGON (((1960720 -41...
-## 7  MULTIPOLYGON (((1379893 -98...
-## 8  MULTIPOLYGON (((868942.5 -2...
-## 9  MULTIPOLYGON (((1279733 -39...
-## 10 MULTIPOLYGON (((1080885 -16...
 ```
 ---
 
-## Mapping the entire US with `shift_geo`
-
 
 ```r
-tm_shape(us_median_age) + 
-  tm_polygons()
+tm_shape(us_median_age) + tm_polygons()
 ```
 
 ![](index_files/figure-html/show-shift-geo-1.png)&lt;!-- --&gt;
 
 ---
-
-## Mapping the entire US with `shift_geo`
 
 
 ```r
@@ -953,9 +945,20 @@ tm_shape(us_median_age) +
 
 ![](index_files/figure-html/style-shift-geo-1.png)&lt;!-- --&gt;
 
+---
+
 ## Interactive mapping
 
-{a few slides here}
+* For quick interactive mapping, use the `zcol` parameter in `mapview()` or `tmap_mode("view")` in tmap
+
+* For customizable interactive mapping, check out the leaflet package and its integration with the Shiny framework for data dashboards
+
+
+```r
+library(mapview)
+
+mapview(dc_income, zcol = "estimate")
+```
 
 ---
 
@@ -975,9 +978,13 @@ st_write(dc_income, "data/dc_income.shp")
 
 ---
 
-## Exercises
+## Part 2 exercises
 
-{fill in here}
+Try making your own map with tmap!  
+
+* If you are just getting started with tidycensus/the tidyverse, make a race/ethnicity map by adapting the code provided in this section but for a different county.  
+
+* If you are comfortable with tidycensus at this stage, pick a different variable to map instead!
 
 ---
 class: middle, center, inverse
@@ -986,61 +993,482 @@ class: middle, center, inverse
 
 ---
 
+## Spatial analysis in a GIS
+
+.pull-left[
+
+Some typical terminology for spatial analysis in a desktop GIS context: 
+
+* Select by Attributes
+
+* Select by Location
+
+* Spatial Join
+
+* Geoprocessing (Clip, Dissolve, Union, etc.)
+
+]
+
+.pull-right[
+
+&lt;img src="img/co_dissolve.png" style="width: 500px"&gt;
+
+]
+
+---
+
 ## sf: a tidy data model for spatial analysis
 
+* sf's data model is designed for integration within tidyverse data wrangling workflows
+
+* Many tidyverse methods (including those presented last week) work on sf objects
+
+* Geometries are "sticky" and not lost after performing data wrangling operations
+
+* The `st_*()` family of functions help you complete many common GIS tasks
+
+---
+
+## Topic: COVID-19 vaccinations in Texas
+
+* Of interest: how do COVID-19 vaccination rates vary geographically in Texas?
+
+* The most granular geography available is the zip code, which we approximate with the Zip Code Tabulation Area (ZCTA)
+
+* Data should be normalized by population given wide variations in ZCTA populations
+
+---
+
+## Data setup
+
+* [Up-to-date vaccination data available from the Texas Department of State Health Services](https://dshs.texas.gov/coronavirus/AdditionalData.aspx); I've cleaned up the Excel spreadsheet for us
 
 
-## "Tidy" spatial analysis
+```r
+library(tidyverse)
 
-{general discussion here}
+tx_vaccinations &lt;- read_rds("spatial-analysis/data/tx_vaccinations.rds")
+
+glimpse(tx_vaccinations)
+```
+
+```
+## Rows: 2,487
+## Columns: 4
+## $ zip_code           &lt;chr&gt; "73301", "73344", "73960", "75001", "75002", "7500…
+## $ total_vaccinations &lt;dbl&gt; 102, NA, 13, 3526, 18830, 9806, 13794, 4103, 8983,…
+## $ first_dose         &lt;dbl&gt; 55, NA, 7, 2328, 11693, 6487, 9163, 2545, 5774, 64…
+## $ fully_vaccinated   &lt;dbl&gt; 47, NA, NA, 1202, 7155, 3333, 4657, 1561, 3221, 33…
+```
+
+---
+
+## Data setup
+
+.pull-left[
+
+* Given that vaccines are only administered to patients age 16 and up, we can acquire appropriate normalization data from the ACS Data Profile
+
+
+```r
+library(tidycensus)
+options(tigris_use_cache = TRUE)
+
+pop16up &lt;- get_acs(
+  geography = "zcta",
+  variables = "DP03_0001",
+  geometry = TRUE,
+  state = "TX"
+)
+```
+
+]
+
+.pull-right[
+
+
+```r
+library(tmap)
+
+tm_shape(pop16up) + tm_fill(col = "estimate")
+```
+
+![](index_files/figure-html/map-normalization-pop-1.png)&lt;!-- --&gt;
+]
+
+---
+
+## "Joining" geometries and attributes
+
+* dplyr's `*_join()` family of functions help analysts merge tabular data to sf objects
+
+
+```r
+tx_vacc_rate &lt;- pop16up %&gt;%
+  left_join(tx_vaccinations, by = c("GEOID" = "zip_code")) %&gt;%
+  mutate(pct_vaccinated = 100 * (total_vaccinations / estimate)) %&gt;%
+  mutate(pct_vaccinated = ifelse(pct_vaccinated &gt; 100, NA, pct_vaccinated))
+```
+
+---
+
+
+```r
+tm_shape(tx_vacc_rate) + tm_fill(col = "pct_vaccinated", palette = "Reds")
+```
+
+![](index_files/figure-html/map-rates-1.png)&lt;!-- --&gt;
+
+---
+
+## Selecting data by attributes
+
+* dplyr's `filter()` works on spatial data and allows for targeted visualization by attribute values
+
+
+```r
+dallas_area &lt;- tx_vacc_rate %&gt;%
+  filter(str_sub(GEOID, 1, 2) == "75")
+
+above_40 &lt;- dallas_area %&gt;%
+  filter(pct_vaccinated &gt;= 40)
+```
+
+---
+
+
+```r
+tm_shape(dallas_area) + tm_polygons() + 
+  tm_shape(above_40) + tm_polygons(col = "navy") 
+```
+
+![](index_files/figure-html/above-40-1.png)&lt;!-- --&gt;
+
+---
+class: middle, center, inverse
+
+## Spatial overlay
 
 ---
 
 ## Spatial overlay
 
-{info here}
+* Common question: how do local characteristics vary within and between metropolitan areas?
+
+* Methods: _spatial filtering_ ("select by location" in a GIS context) and _spatial joins_
+
+* tigris geometries work well for a wide range of Census overlays
+
+
+```r
+dfw_metro &lt;- core_based_statistical_areas(cb = TRUE) %&gt;%
+  filter(str_detect(NAME, "Dallas"))
+```
 
 ---
 
-## Methods for spatial overlay
+## Spatial filters
 
-{info here}
+* The sf package implements spatial filters using both base R notation and the tidyverse-style `st_filter()` function
+
+For example, 
+
+
+```r
+library(sf)
+
+dfw_zips &lt;- tx_vacc_rate[dfw_metro, ]
+```
+
+is equivalent to: 
+
+
+```r
+dfw_zips &lt;- st_filter(tx_vacc_rate, dfw_metro)
+```
+
+---
+
+
+```r
+tm_shape(dfw_zips) + 
+  tm_polygons(col = "pct_vaccinated", palette = "Reds") + 
+  tm_layout(legend.outside = TRUE)
+```
+
+![](index_files/figure-html/plot-filter-1.png)&lt;!-- --&gt;
 
 ---
 
 ## Spatial predicates
 
-{examples here}
+* The default _spatial predicate_, `st_intersects()`, defines the spatial relationship as any overlap between the two layers
+
+* Many other spatial predicates are available ([see the sf documentation for more examples](https://r-spatial.github.io/sf/reference/geos_binary_pred.html))
+
+* Example: ZCTAs that fall entirely within the Dallas-Fort Worth metro boundary (do not cross the border)
+
+
+```r
+dfw_zips_within &lt;- st_filter(tx_vacc_rate, dfw_metro, .predicate = st_within)
+```
 
 ---
-class: middle, center, inverse
 
-## Spatial joins and group-wise spatial analysis
+
+```r
+tm_shape(dfw_zips_within) + 
+  tm_polygons(col = "pct_vaccinated", palette = "Reds") + 
+  tm_layout(legend.outside = TRUE)
+```
+
+![](index_files/figure-html/plot-within-1.png)&lt;!-- --&gt;
 
 ---
 
 ## Spatial joins
 
-{info here}
+.pull-left[
+
+* Spatial joins transfer attributes from one spatial dataset to another based on shared spatial relationships
+
+* Like spatial filters, spatial joins rely on spatial predicates to determine spatial relationships between features
+
+* Implemented in the sf package with `st_join()`
+
+]
+
+.pull-right[
+
+
+```r
+tx_metros &lt;- core_based_statistical_areas(cb = TRUE) %&gt;%
+  filter(GEOID %in% c("19100", "26420", "41700", "12420")) %&gt;%
+  select(metro_name = NAME)
+
+zips_by_metro &lt;- tx_vacc_rate %&gt;%
+  st_join(tx_metros, left = FALSE)
+```
+]
 
 ---
 
-## Distance and proximity analysis
 
-{series of slides here}
+```r
+glimpse(zips_by_metro)
+```
+
+```
+## Rows: 827
+## Columns: 11
+## $ GEOID              &lt;chr&gt; "77414", "75287", "78621", "76201", "78150", "7861…
+## $ NAME               &lt;chr&gt; "ZCTA5 77414", "ZCTA5 75287", "ZCTA5 78621", "ZCTA…
+## $ variable           &lt;chr&gt; "DP03_0001", "DP03_0001", "DP03_0001", "DP03_0001"…
+## $ estimate           &lt;dbl&gt; 18595, 45980, 18275, 27079, 37, 9643, 1121, 12809,…
+## $ moe                &lt;dbl&gt; 626, 883, 1288, 1116, 24, 1398, 271, 649, 973, 406…
+## $ total_vaccinations &lt;dbl&gt; 3531, 9042, 4069, 4429, NA, 1953, 60, 4447, 9240, …
+## $ first_dose         &lt;dbl&gt; 2433, 5745, 2984, 2860, NA, 1444, 40, 2970, 5830, …
+## $ fully_vaccinated   &lt;dbl&gt; 1099, 3307, 1088, 1575, NA, 510, 20, 1486, 3416, 4…
+## $ pct_vaccinated     &lt;dbl&gt; 18.988976, 19.665072, 22.265390, 16.355848, NA, 20…
+## $ metro_name         &lt;chr&gt; "Houston-The Woodlands-Sugar Land, TX", "Dallas-Fo…
+## $ geometry           &lt;MULTIPOLYGON [°]&gt; MULTIPOLYGON (((-96.07715 2..., MULTI…
+```
+---
+
+## Comparative visualization
+
+
+```r
+ggplot(zips_by_metro) + 
+  geom_density(aes(x = pct_vaccinated), color = "navy", fill = "navy", 
+               alpha = 0.4) + 
+  theme_minimal() + 
+  facet_wrap(~metro_name) + 
+  labs(title = "Percent of population age 16+ vaccinated for COVID-19",
+       subtitle = "ZCTAs, largest metropolitan areas in Texas",
+       y = "Kernel density estimate",
+       x = "Percent receiving at least one vaccine dose")
+```
 
 ---
 
-## Exploratory spatial data analysis
+&lt;img src=img/compare_by_metro.png style="width: 800px"&gt;
 
-{info here}
+---
+class: middle, center, inverse
+
+## Advanced application: spatial clustering and group-wise spatial data analysis
 
 ---
 
-## Spatial clustering
+## The spdep package
 
-{info here}
+.pull-left[
 
+* spdep: the workhorse R package for both exploratory spatial data analysis and spatial modeling
+
+* Key concept: _spatial neighbors_
+
+* spdep helps model spatial relationships for clustering analysis, spatial lags &amp; smoothing, and spatially-aware modeling
+
+]
+
+.pull-right[
+
+&lt;img src=img/neighbors.png style="width: 450px"&gt;
+
+]
+
+---
+
+## Data setup
+
+* Research question: can we identify contiguous "regions" in Wayne County, Michigan by age, income, and education?
+
+
+```r
+input_tracts &lt;- get_acs(
+  geography = "tract",
+  variables = c(median_age = "B01002_001",
+                median_income = "B19013_001",
+                pct_college = "DP02_0068P"),
+  state = "MI",
+  county = "Wayne",
+  geometry = TRUE,
+  output = "wide"
+) %&gt;%
+  select(-ends_with("M")) %&gt;%
+  na.omit()
+```
+---
+
+## The SKATER algorithm
+
+.pull-left[
+
+* General concept: unsupervised clustering with spatial constraints
+
+* SKATER: Spatial "Kluster" Analysis by Tree Edge Removal
+
+* Uses minimum spanning trees to minimize within-group dissimilarity while ensuring that groups are spatially contiguous
+
+]
+
+.pull-right[
+
+
+```r
+library(spdep)
+
+input_vars &lt;- input_tracts %&gt;%
+  select(median_ageE:pct_collegeE) %&gt;%
+  st_drop_geometry() %&gt;%
+  scale() %&gt;%
+  as.data.frame()
+
+nb &lt;- poly2nb(input_tracts)
+costs &lt;- nbcosts(nb, input_vars)
+weights &lt;- nb2listw(nb, costs, style = "B")
+```
+
+]
+
+---
+
+## Regionalization with SKATER
+
+
+```r
+mst &lt;- mstree(weights)
+
+regions &lt;- skater(mst[,1:2], input_vars, ncuts = 6)
+
+input_tracts$group &lt;- as.character(regions$group)
+```
+
+---
+
+
+```r
+tm_shape(input_tracts) + tm_polygons("group", palette = "Set1")
+```
+
+![](index_files/figure-html/plot-groups-1.png)&lt;!-- --&gt;
+
+---
+
+## Group-wise operations on spatial data
+
+* dplyr's `group_by()` and `summarize()`, used together on a spatial object, implements an analogous operation to a _Dissolve_ in a GIS
+
+
+```r
+wayne_regions &lt;- input_tracts %&gt;%
+  group_by(group) %&gt;%
+  summarize(across(.cols = where(is.numeric),
+                   .fns = mean))
+```
+
+---
+
+
+```r
+tm_shape(wayne_regions) + tm_polygons(col = "group", palette = "Set1")
+```
+
+![](index_files/figure-html/wayne-regions-map-1.png)&lt;!-- --&gt;
+
+---
+
+
+```r
+wayne_regions
+```
+
+```
+## Simple feature collection with 7 features and 4 fields
+## geometry type:  GEOMETRY
+## dimension:      XY
+## bbox:           xmin: -83.55191 ymin: 42.03334 xmax: -82.87023 ymax: 42.45101
+## geographic CRS: NAD83
+## # A tibble: 7 x 5
+##   group median_ageE median_incomeE pct_collegeE                         geometry
+##   &lt;chr&gt;       &lt;dbl&gt;          &lt;dbl&gt;        &lt;dbl&gt;                   &lt;GEOMETRY [°]&gt;
+## 1 1            35.9         30436.         12.7 POLYGON ((-83.14968 42.24173, -…
+## 2 2            40.5         57190.         19.7 MULTIPOLYGON (((-83.19159 42.03…
+## 3 3            46.2        127539.         67.7 POLYGON ((-82.91176 42.3793, -8…
+## 4 4            40.2         61136.         28.6 MULTIPOLYGON (((-83.40908 42.33…
+## 5 5            33.2         47426.         57.1 MULTIPOLYGON (((-83.06632 42.32…
+## 6 6            42.1        102535.         55.8 POLYGON ((-83.44288 42.3086, -8…
+## 7 7            48.8        102002.         50.8 POLYGON ((-83.47005 42.39107, -…
+```
+
+---
+
+## Part 3 exercises
+
+Try putting together a spatial analysis workflow yourself!  Acquire data on median household income by Census tract for Texas: 
+
+
+```r
+texas_income &lt;- get_acs(
+  geography = "tract",
+  variables = "B19013_001",
+  state = "TX",
+  geometry = TRUE
+)
+```
+
+Answer the following: 
+
+* How does median household income vary geographically in the Austin metropolitan area?  Show this on a map.  
+
+* How does the distribution of median household incomes by Census tract vary among the four largest metro areas in Texas?  
+
+---
+class: middle, center, inverse
+
+## Thank you!
 
 
 
