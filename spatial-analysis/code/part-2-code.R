@@ -8,6 +8,7 @@ remotes::install_github("walkerke/crsuggest")
 
 ## Set your Census API key if need be
 library(tidycensus)
+options(tigris_use_cache = TRUE)
 census_api_key("YOUR KEY GOES HERE")
 
 
@@ -54,8 +55,8 @@ plot(mi_counties_cb$geometry)
 
 
 ## ----get-yearly-data-----------------------------------------------------------------------------------
-tarrant90 <- tracts("TX", "Tarrant", cb = TRUE, year = 1990)
-tarrant00 <- tracts("TX", "Tarrant", cb = TRUE, year = 2000)
+tarrant90 <- suppressMessages(tracts("TX", "Tarrant", cb = TRUE, year = 1990))
+tarrant00 <- suppressMessages(tracts("TX", "Tarrant", cb = TRUE, year = 2000))
 tarrant10 <- tracts("TX", "Tarrant", cb = TRUE, year = 2010)
 # Cartographic boundary files not yet released for 2020
 tarrant20 <- tracts("TX", "Tarrant", year = 2020)
