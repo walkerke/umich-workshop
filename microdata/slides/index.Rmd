@@ -1,0 +1,241 @@
+---
+title: "ACS Microdata and International Census Data"
+author: "Kyle Walker"
+date: March 25, 2021
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: xaringan-themer.css
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: 16:9
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+options(tigris_use_cache = TRUE)
+library(tigris)
+library(tmap)
+tmap_options(legend.text.size = 1)
+
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, fig.width = 12)
+```
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+library(xaringanthemer)
+
+style_xaringan(
+  title_slide_background_color = "#035004",
+  text_color = "black",
+  header_color = "#035004",
+  inverse_background_color = "#035004",
+  text_font_family = "Gotham Narrow",
+  header_font_family = "Helvetica",
+  header_font_weight = "bold",
+  link_color = "#1a730f",
+  code_inline_color = "#035004"
+)
+```
+
+## About me
+
+* Associate Professor of Geography at TCU 
+
+* Spatial data science researcher and consultant
+
+* R package developer: tidycensus, tigris, mapboxapi
+
+* Book coming this year: _Analyzing the US Census with R_
+  - These workshops are a sneak preview of the book's content!
+
+---
+
+## SSDAN workshop series
+
+* Today: US Census microdata and international Census data in R
+
+* March 4: an introduction to analyzing US Census data with tidycensus ([code](https://github.com/walkerke/umich-workshop/blob/main/census-data-in-r/code/part-1-code.R) | [video recording](https://www.youtube.com/watch?v=PnFJfuJ83NI))
+
+* March 11: spatial analysis of US Census data in R  ([code](https://github.com/walkerke/umich-workshop/blob/main/spatial-analysis/code/part-2-code.R) | [video recording](https://www.youtube.com/watch?v=GqC1HjAKui4))
+
+---
+
+## Today's agenda
+
+* Hour 1: Using ACS microdata with tidycensus
+
+* Hour 2: Analyzing and modeling microdata
+
+* Hour 3: Bonus: international Census data resources in R
+
+---
+class: middle, center, inverse
+
+## Part 1: Using ACS microdata with tidycensus
+
+---
+
+## What is "microdata?"  
+
+{explain here}
+
+---
+
+## Microdata resources: DataFerrett
+
+{discuss here}
+
+---
+
+## Microdata resources: bulk Census downloads
+
+{discuss here}
+
+---
+
+## Microdata resources: IPUMS
+
+{discuss here}
+
+---
+
+## Microdata and the Census API
+
+{explain here how data.census.gov made it available}
+
+---
+class: middle, center, inverse
+
+## Using microdata in tidycensus
+
+---
+
+## Setting up tidycensus
+
+```{r, eval = FALSE}
+library(tidycensus)
+
+census_api_key("YOUR KEY GOES HERE", install = TRUE)
+```
+
+
+---
+
+## Basic usage of `get_pums()`
+
+{Explain the arguments here}
+
+```{r}
+library(tidycensus)
+
+wy_pums <- get_pums(
+  variables = c("PUMA", "SEX", "AGEP", "SCHL"),
+  state = "WY",
+  survey = "acs1",
+  year = 2019
+)
+```
+
+---
+
+```{r}
+wy_pums
+```
+
+---
+
+## Understanding default data from `get_pums()`
+
+{discuss serial number, weights, etc.}
+
+---
+
+## Weights and ACS microdata
+
+```{r}
+library(tidyverse)
+
+wy_age_50 <- filter(wy_pums, AGEP == 50)
+
+print(sum(wy_pums$PWGTP))
+print(sum(wy_age_50$PWGTP))
+```
+
+---
+class: middle, center, inverse
+
+## Working with PUMS variables
+
+---
+
+## Variables available in the ACS PUMS
+
+```{r, eval = FALSE}
+View(pums_variables)
+```
+
+---
+
+## Understanding PUMS variables
+
+{info here}
+
+---
+
+## Recoding PUMS variables
+
+{how-to here}
+
+---
+
+## Using variables filters
+
+{show how here}
+
+---
+class: middle, center, inverse
+
+## Public Use Microdata Areas (PUMAs)
+
+---
+
+## What is a PUMA?
+
+{example from tigris here}
+
+---
+
+## Working with PUMAs in PUMS data
+
+{info here}
+
+---
+
+## Custom queries by PUMA
+
+{info here}
+
+---
+
+## Advanced example: mapping PUMS data
+
+{calculate count, join to shapes, tmap bubbles}
+
+---
+
+## Part 1 exercises
+
+{exercises here}
+
+---
+class: middle, center, inverse
+
+## Analyzing and modeling PUMS data in R
+
+---
+
+
+
+
