@@ -89,6 +89,12 @@ class: middle, center, inverse
 
 ]
 
+.pull-right[
+
+{microdata example/screenshot}
+
+]
+
 ---
 
 ## Microdata resources: Census website
@@ -97,15 +103,15 @@ class: middle, center, inverse
 
 ---
 
-## Microdata resources: bulk Census downloads
+## Microdata resources: IPUMS
 
 {discuss here}
 
 ---
 
-## Microdata resources: IPUMS
+## Microdata resources: ipumsr
 
-{discuss here}
+{brief example here of ipumsr use}
 
 ---
 
@@ -133,18 +139,31 @@ census_api_key("YOUR KEY GOES HERE", install = TRUE)
 
 ## Basic usage of `get_pums()`
 
-{Explain the arguments here}
+.pull-left[
+
+* `get_pums()` requires specifying one or more variables and the state for which you'd like to request data.  `state = 'all'` _can_ get data for the entire USA, but it takes a while!
+
+* The function defaults to the 5-year ACS with `survey = "acs5"`; 1-year ACS data is available with `survey = "acs1"`. 
+
+* The default year is 2019; data are available back to {year}
+
+]
+
+
+.pull-right[
 
 ```{r}
 library(tidycensus)
 
 wy_pums <- get_pums(
-  variables = c("PUMA", "SEX", "AGEP", "SCHL"),
+  variables = c("SEX", "AGEP", "SCHL"),
   state = "WY",
   survey = "acs1",
   year = 2019
 )
 ```
+
+]
 
 ---
 
@@ -156,11 +175,21 @@ wy_pums
 
 ## Understanding default data from `get_pums()`
 
-{discuss serial number, weights, etc.}
+`get_pums()` returns some technical variables by default without the user needing to request them specifically.  These include: 
+
+* `SERIALNO`: a serial number that uniquely identifies households in the sample; 
+
+* `SPORDER`: the order of the person in the household; when combined with `SERIALNO`, uniquely identifies a person;
+
+* `WGTP`: the household weight;
+
+* `PWGTP`: the person weight
 
 ---
 
 ## Weights and ACS microdata
+
+* Given that PUMS data are a _sample_ of the US population, the weights columns must be used for analysis
 
 ```{r}
 library(tidyverse)
@@ -194,13 +223,49 @@ View(pums_variables)
 
 ## Recoding PUMS variables
 
-{how-to here}
+```{r}
+wy_pums_recoded <- get_pums(
+  variables = c("SEX", "AGEP", "SCHL"),
+  state = "WY",
+  survey = "acs1",
+  year = 2019,
+  recode = TRUE
+)
+```
+
+---
+
+```{r}
+wy_pums_recoded
+```
 
 ---
 
 ## Using variables filters
 
-{show how here}
+* PUMS datasets - especially from the 5-year ACS - can get quite large.  The `variables_filter` argument can return a subset of data from the API, reducing long download times
+
+```{r}
+wy_pums_filtered <- get_pums(
+  variables = c("SEX", "AGEP", "SCHL"),
+  state = "WY",
+  survey = "acs5",
+  variables_filter = list(
+    SEX = 2,
+    SCHL = 16:20
+  ),
+  year = 2019,
+  recode = TRUE
+)
+```
+
+
+---
+
+```{r}
+wy_pums_filtered
+```
+
 
 ---
 class: middle, center, inverse
@@ -211,25 +276,79 @@ class: middle, center, inverse
 
 ## What is a PUMA?
 
-{example from tigris here}
+.pull-left[
+
+* Public Use Microdata Areas (PUMAs) are the smallest available geographies at which records are identifiable in the PUMS datasets
+
+* PUMAs are redrawn with each decennial US Census, and typically are home to 100,000-200,000 people
+
+* In large cities, a PUMA will represent a collection of nearby neighborhoods; in rural areas, it might represent several counties across a large area of a state
+
+]
+
+.pull-right[
+
+```{r}
+library(tigris)
+options(tigris_use_cache = TRUE)
+
+wy_pumas <- pumas(state = "WY", cb = TRUE)
+
+plot(wy_pumas$geometry)
+```
+
+]
 
 ---
 
 ## Working with PUMAs in PUMS data
 
-{info here}
+* To get PUMA information in your output data, use the variable code `PUMA`
+
+```{r}
+wy_age_by_puma <- get_pums(
+  variables = c("PUMA", "AGEP"),
+  state = "WY",
+  survey = "acs5"
+)
+```
+
+---
+
+```{r}
+wy_age_by_puma
+```
+
 
 ---
 
 ## Custom queries by PUMA
 
-{info here}
+* The `puma` argument in `get_pums()` can be used to obtain data for a specific PUMA or multiple PUMAs - again reducing long download times if specific geographies are required
+
+```{r}
+wy_puma_subset <- get_pums(
+  variables = c("PUMA", "AGEP"),
+  state = "WY",
+  survey = "acs5",
+  puma = "00500"
+)
+```
+
+---
+
+```{r}
+wy_puma_subset
+```
+
 
 ---
 
 ## Part 1 exercises
 
-{exercises here}
+* Try requesting PUMS data using `get_pums()` yourselves, but for a state other than Wyoming.  
+
+* Use the `pums_variables` dataset to browse the available variables in the PUMS.  Create a custom query with `get_pums()` to request data for variables other than those we've used in the above examples.  
 
 ---
 class: middle, center, inverse
