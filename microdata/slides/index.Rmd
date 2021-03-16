@@ -359,17 +359,55 @@ class: middle, center, inverse
 
 ## Considerations when working with PUMS data
 
-{discuss error, etc.}
+* The individual-level microdata returned by `get_pums()` can be used to produce detailed cross-tabulations not available in the aggregate ACS, e.g. from `get_acs()`
+
+* tidyverse tools like dplyr are excellent for producing these tabulations and handling survey weights
+
+* Because data acquired with `get_pums()` are drawn from the ACS, any estimates produced in your analysis will be characterized by error - which can be substantial when cross-tabulations are highly specific
+
 
 ---
 
 ## PUMS data and the tidyverse
 
-{example here}
+```{r}
+sd_pums<- get_pums(
+  variables = c("PUMA", "SEX", "AGEP", "SCHL"),
+  state = "SD",
+  survey = "acs5",
+  year = 2019,
+  recode = TRUE
+)
+
+sd_sex_ratio <- sd_pums %>%
+  count(SEX, AGEP, wt = PWGTP) # test this out
+  
+```
+
+---
+
+```{r}
+sd_sex_ratio
+```
+
+
 
 ---
 
 ## Group-wise data tabulation
+
+```{r}
+sd_pums_summary <- sd_pums %>% 
+  mutate(ba_above = SCHL %in% c("21", "22", "23", "24")) %>% 
+  group_by(PUMA, SEX_label) %>% 
+  summarize(
+    total_pop = sum(PWGTP),
+    mean_age = weighted.mean(AGEP, PWGTP),
+    ba_above = sum(PWGTP[ba_above == TRUE & AGEP >= 25]),
+    ba_above_pct = ba_above / sum(PWGTP[AGEP >= 25])
+  )
+```
+
 
 ---
 
@@ -520,13 +558,39 @@ top_tfr
 
 ## Canada: cancensus
 
-{info}
+```{r}
+library(cancensus)
+library(tidyverse)
+library(sf)
+options(cancensus.api_key = "CensusMapper_6293253518cbfcfc86b62e83f056f92f")
+
+View(list_census_vectors("CA16"))
+
+```
 
 ---
 
 ## Canada: cancensus
 
-{example}
+```{r}
+montreal_english <- get_census(
+  dataset = "CA16",
+  regions = list(CMA = "24462"),
+  vectors = "v_CA16_1364",
+  level = "CT",
+  geo_format = "sf",
+  labels = "short"
+)
+```
+
+---
+
+```{r}
+tm_shape(montreal_english) + 
+  tm_polygons() + 
+  tm_bubbles(col = "v_CA16_1364")
+```
+
 
 ---
 
