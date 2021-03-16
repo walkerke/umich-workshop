@@ -79,11 +79,19 @@ class: middle, center, inverse
 
 ## What is "microdata?"  
 
-{explain here}
+.pull-left[
+
+* __Microdata__: individual-level survey responses made available to researchers 
+
+* The ACS Public Use Microdata Series (PUMS) allows for detailed cross-tabulations not available in aggregated data
+
+* The 1-year PUMS covers about 1 percent of the US population; the 5-year PUMS covers about 5 percent (so, not the full ACS)
+
+]
 
 ---
 
-## Microdata resources: DataFerrett
+## Microdata resources: Census website
 
 {discuss here}
 
@@ -219,12 +227,6 @@ class: middle, center, inverse
 
 ---
 
-## Advanced example: mapping PUMS data
-
-{calculate count, join to shapes, tmap bubbles}
-
----
-
 ## Part 1 exercises
 
 {exercises here}
@@ -236,6 +238,228 @@ class: middle, center, inverse
 
 ---
 
+## Considerations when working with PUMS data
+
+{discuss error, etc.}
+
+---
+
+## PUMS data and the tidyverse
+
+{example here}
+
+---
+
+## Group-wise data tabulation
+
+---
+
+## Advanced example: mapping PUMS data
+
+{calculate count, join to shapes, tmap bubbles}
+
+---
+class: middle, center, inverse
+
+## Calculating errors around tabulated estimates
+
+---
+
+## Survey design and the ACS PUMS
+
+{general info here}
+
+---
+
+## Getting replicate weights
+
+{how-to}
+
+---
+
+## Creating a `survey` object
+
+{how-to here}
+
+---
+
+## Calculating estimates and errors with __srvyr__
+
+{example here}
+
+---
+
+## Complex tabulations with __srvyr__
+
+{example here}
+
+---
+
+## Converting standard errors to MOEs
+
+{example here}
+
+---
+class: middle, center, inverse
+
+## Modeling with PUMS data
+
+---
+
+## Preparing data
+
+{how-to here}
+
+---
+
+## Fitting a model
+
+{how-to here}
+
+---
+
+## Evaluating the model
+
+{info here}
+
+---
+class: middle, center, inverse
+
+## Part 2 exercises
+
+{exercises here}
+
+---
+class: middle, center, inverse
+
+## International Census data resources in R
+
+---
+
+## International Census data
+
+{discussion of how we've focused on US Census data, but there is much more!}
+
+---
+
+## The US Census International Data Base
+
+{info here}
+
+---
+
+## International data with idbr
+
+* Example: how has life expectancy at birth changed in Southeast Asia?
+
+```{r}
+laos_lex <- idb5(
+  country = c("Laos", "Vietnam", "Cambodia", "Thailand"),
+  year = 1995:2021,
+  variable = "E0",
+  country_name = TRUE
+)
+
+ggplot(laos_lex, aes(x = time, y = E0, color = NAME)) + 
+  theme_minimal(base_size = 18) + 
+  geom_line(size = 2) + 
+  labs(title = "Change in life expectancy, 1995-2021",
+       y = "Life expectancy at birth",
+       x = "Year")
+```
+
+
+---
+
+## International data with idbr
+
+.pull-left[
+
+* Example: what 10 countries have the highest total fertility rates in 2021?
+
+```{r}
+top_tfr <- idb5(
+  country = "all",
+  year = 2021,
+  variable = "TFR",
+  country_name = TRUE
+) %>%
+  slice_max(TFR, n = 10)
+```
+
+]
+
+.pull-right[
+
+```{r}
+top_tfr
+```
+
+]
+
+---
+
+## Canada: cancensus
+
+{info}
+
+---
+
+## Canada: cancensus
+
+{example}
+
+---
+
+## Mexico: inegiR
+
+{info}
+
+---
+
+## Mexico: inegiR
+
+{example}
+
+---
+
+## Brazil: geobr
+
+{info}
+
+---
+
+## Brazil: geobr
+
+{example}
+
+---
+
+## Kenya: RKenyaCensus
+
+{info}
+
+---
+
+## Kenya: RKenyaCensus
+
+{example}
+
+---
+
+## United Kingdom: nomisr
+
+{info}
+
+---
+
+## United Kingdom: nomisr
+
+{example}
+
+---
+
+## International microdata with IPUMS-I
 
 
 
