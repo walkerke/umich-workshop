@@ -19,7 +19,7 @@ Alternatively, you can use a pre-configured environment in RStudio Cloud, availa
 
 * Workshop 1: [Accessing and Analyzing US Census Data in R](http://walker-data.com/umich-workshop/census-data-in-r/slides/#1)
 * Workshop 2: [Spatial Analysis of US Census Data in R](http://walker-data.com/umich-workshop/spatial-analysis/slides/#1)
-* Workshop 3: Analyzing US Census Microdata in R (coming soon!)
+* Workshop 3: [Analyzing US Census Microdata in R & International Census Data](http://walker-data.com/umich-workshop/microdata/slides/#1) 
 
 ## License
 
