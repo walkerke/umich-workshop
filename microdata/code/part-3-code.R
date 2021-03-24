@@ -141,6 +141,7 @@ ms_pums_summary
 
 ## ----join-ms-data---------------------------------------------------------------------------
 library(tigris)
+library(tmap)
 options(tigris_use_cache = TRUE)
 
 ms_pumas <- pumas("MS", cb = TRUE)

@@ -425,6 +425,7 @@ ms_pums_summary
 
 ```{r join-ms-data}
 library(tigris)
+library(tmap)
 options(tigris_use_cache = TRUE)
 
 ms_pumas <- pumas("MS", cb = TRUE)
@@ -723,6 +724,9 @@ class: middle, center, inverse
 ```{r idbr-1, eval = FALSE}
 library(idbr)
 library(tidyverse)
+
+# Not necessary if you have the development version of idbr
+idb_api_key(Sys.getenv("CENSUS_API_KEY"))
 
 se_asia_lex <- idb5(
   country = c("Laos", "Vietnam", "Cambodia", "Thailand"),
