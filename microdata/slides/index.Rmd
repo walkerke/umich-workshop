@@ -1,0 +1,1040 @@
+---
+title: "ACS Microdata and International Census Data"
+author: "Kyle Walker"
+date: March 25, 2021
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: xaringan-themer.css
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: 16:9
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+options(tigris_use_cache = TRUE)
+library(tigris)
+library(tmap)
+tmap_options(legend.text.size = 1)
+
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, fig.width = 12)
+```
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+library(xaringanthemer)
+
+style_xaringan(
+  title_slide_background_color = "#035004",
+  text_color = "black",
+  header_color = "#035004",
+  inverse_background_color = "#035004",
+  text_font_family = "Gotham Narrow",
+  header_font_family = "Helvetica",
+  header_font_weight = "bold",
+  link_color = "#1a730f",
+  code_inline_color = "#035004"
+)
+```
+
+## About me
+
+* Associate Professor of Geography at TCU 
+
+* Spatial data science researcher and consultant
+
+* R package developer: tidycensus, tigris, mapboxapi
+
+* Book coming this year: _Analyzing the US Census with R_
+  - These workshops are a sneak preview of the book's content!
+
+---
+
+## SSDAN workshop series
+
+* Today: US Census microdata and international Census data in R
+
+* March 4: an introduction to analyzing US Census data with tidycensus ([code](https://github.com/walkerke/umich-workshop/blob/main/census-data-in-r/code/part-1-code.R) | [video recording](https://www.youtube.com/watch?v=PnFJfuJ83NI))
+
+* March 11: spatial analysis of US Census data in R  ([code](https://github.com/walkerke/umich-workshop/blob/main/spatial-analysis/code/part-2-code.R) | [video recording](https://www.youtube.com/watch?v=GqC1HjAKui4))
+
+---
+
+## Today's agenda
+
+* Hour 1: Using ACS microdata with tidycensus
+
+* Hour 2: Analyzing and modeling microdata
+
+* Hour 3: Bonus: international Census data resources in R
+
+---
+class: middle, center, inverse
+
+## Part 1: Using ACS microdata with tidycensus
+
+---
+
+## What is "microdata?"  
+
+* __Microdata__: individual-level survey responses made available to researchers 
+
+* [The ACS Public Use Microdata Series (PUMS)](https://www.census.gov/programs-surveys/acs/microdata.html) allows for detailed cross-tabulations not available in aggregated data
+
+* The 1-year PUMS covers about 1 percent of the US population; the 5-year PUMS covers about 5 percent (so, not the full ACS)
+
+* Data downloads available [in bulk from the Census FTP server](https://www2.census.gov/programs-surveys/acs/data/pums/2019/5-Year/) or [from data.census.gov's MDAT tool](https://data.census.gov/mdat/#/search?ds=ACSPUMS5Y2019)
+
+
+---
+
+## Microdata resources: IPUMS & ipumsr
+
+<img src=img/ipums.png style="width: 800px">
+
+---
+
+## Microdata and the Census API
+
+<img src=img/micro_api.png style="width: 800px">
+
+---
+class: middle, center, inverse
+
+## Using microdata in tidycensus
+
+---
+
+## Setting up tidycensus
+
+* To use tidycensus, you will need a Census API key.  Visit https://api.census.gov/data/key_signup.html to request a key, then activate the key from the link in your email.  
+
+* Once activated, use the `census_api_key()` function to set your key as an environment variable
+
+```{r api-key, eval = FALSE}
+library(tidycensus)
+
+census_api_key("YOUR KEY GOES HERE", install = TRUE)
+```
+
+
+---
+
+## Basic usage of `get_pums()`
+
+.pull-left[
+
+* `get_pums()` requires specifying one or more variables and the state for which you'd like to request data.  `state = 'all'` _can_ get data for the entire USA, but it takes a while!
+
+* The function defaults to the 5-year ACS with `survey = "acs5"`; 1-year ACS data is available with `survey = "acs1"`. 
+
+* The default year is 2019; data are available back to 2006 (1-year ACS) and 2005-2009 (5-year ACS)
+
+]
+
+
+.pull-right[
+
+```{r first-call, results = 'hide'}
+library(tidycensus)
+
+wy_pums <- get_pums(
+  variables = c("SEX", "AGEP", "SCHL"),
+  state = "WY",
+  survey = "acs1",
+  year = 2019
+)
+```
+
+]
+
+---
+
+```{r}
+wy_pums
+```
+
+---
+
+## Understanding default data from `get_pums()`
+
+`get_pums()` returns some technical variables by default without the user needing to request them specifically.  These include: 
+
+* `SERIALNO`: a serial number that uniquely identifies households in the sample; 
+
+* `SPORDER`: the order of the person in the household; when combined with `SERIALNO`, uniquely identifies a person;
+
+* `WGTP`: the household weight;
+
+* `PWGTP`: the person weight
+
+---
+
+## Weights and ACS microdata
+
+* Given that PUMS data are a _sample_ of the US population, the weights columns must be used for analysis
+
+```{r tabulate}
+library(tidyverse)
+
+wy_age_50 <- filter(wy_pums, AGEP == 50)
+
+print(sum(wy_pums$PWGTP))
+print(sum(wy_age_50$PWGTP))
+```
+
+---
+class: middle, center, inverse
+
+## Working with PUMS variables
+
+---
+
+## Variables available in the ACS PUMS
+
+```{r view, eval = FALSE}
+View(pums_variables)
+```
+
+* The `pums_variables` dataset is your one-stop shop for browsing variables in the ACS PUMS
+
+* It is a long-form dataset that organizes specific _value codes_ by variable so you know what you can get.  You'll use information in the `var_code` column to fetch variables, but pay attention to the `var_label`, `val_code`, `val_label`, and `data_type` columns
+
+---
+
+## Recoding PUMS variables
+
+.pull-left[
+
+* The `recode = TRUE` argument in `get_pums()` appends recoded columns to your returned dataset based on information available in `pums_variables`
+
+]
+
+.pull-right[
+
+```{r recode, results = 'hide'}
+wy_pums_recoded <- get_pums(
+  variables = c("SEX", "AGEP", "SCHL"),
+  state = "WY",
+  survey = "acs1",
+  year = 2019,
+  recode = TRUE
+)
+```
+
+]
+
+---
+
+```{r show-recode}
+wy_pums_recoded
+```
+
+---
+
+## Using variables filters
+
+.pull-left[
+
+* PUMS datasets - especially from the 5-year ACS - can get quite large.  The `variables_filter` argument can return a subset of data from the API, reducing long download times
+
+* This feature is currently only available in the development (GitHub) version of tidycensus
+
+]
+
+.pull-right[
+
+```{r filter, results = 'hide'}
+wy_pums_filtered <- get_pums(
+  variables = c("SEX", "AGEP", "SCHL"),
+  state = "WY",
+  survey = "acs5",
+  variables_filter = list(
+    SEX = 2,
+    SCHL = 16:20
+  ),
+  year = 2019,
+  recode = TRUE
+)
+```
+
+
+]
+
+---
+
+```{r show-filter}
+wy_pums_filtered
+```
+
+
+---
+class: middle, center, inverse
+
+## Public Use Microdata Areas (PUMAs)
+
+---
+
+## What is a PUMA?
+
+.pull-left[
+
+* Public Use Microdata Areas (PUMAs) are the smallest available geographies at which records are identifiable in the PUMS datasets
+
+* PUMAs are redrawn with each decennial US Census, and typically are home to 100,000-200,000 people
+
+* In large cities, a PUMA will represent a collection of nearby neighborhoods; in rural areas, it might represent several counties across a large area of a state
+
+]
+
+.pull-right[
+
+```{r plot-pumas}
+library(tigris)
+options(tigris_use_cache = TRUE)
+
+wy_pumas <- pumas(state = "WY", cb = TRUE)
+
+plot(wy_pumas$geometry)
+```
+
+]
+
+---
+
+## Working with PUMAs in PUMS data
+
+* To get PUMA information in your output data, use the variable code `PUMA`
+
+```{r get-pumas, results = 'hide'}
+wy_age_by_puma <- get_pums(
+  variables = c("PUMA", "AGEP"),
+  state = "WY",
+  survey = "acs5"
+)
+```
+
+---
+
+```{r show-pumas}
+wy_age_by_puma
+```
+
+
+---
+
+## Custom queries by PUMA
+
+* The `puma` argument in `get_pums()` can be used to obtain data for a specific PUMA or multiple PUMAs - again reducing long download times if specific geographies are required
+
+```{r subset-puma, results = 'hide'}
+wy_puma_subset <- get_pums(
+  variables = "AGEP",
+  state = "WY",
+  survey = "acs5",
+  puma = "00500"
+)
+```
+
+---
+
+```{r show-subset-puma}
+wy_puma_subset
+```
+
+
+---
+
+## Part 1 exercises
+
+* Try requesting PUMS data using `get_pums()` yourselves, but for a state other than Wyoming.  
+
+* Use the `pums_variables` dataset to browse the available variables in the PUMS.  Create a custom query with `get_pums()` to request data for variables other than those we've used in the above examples.  
+
+---
+class: middle, center, inverse
+
+## Analyzing and modeling PUMS data in R
+
+---
+
+## Considerations when working with PUMS data
+
+* The individual-level microdata returned by `get_pums()` can be used to produce detailed cross-tabulations not available in the aggregate ACS, e.g. from `get_acs()`
+
+* tidyverse tools like dplyr are excellent for producing these tabulations and handling survey weights
+
+* Because data acquired with `get_pums()` are drawn from the ACS, any estimates produced in your analysis will be characterized by error - which can be substantial when cross-tabulations are highly specific
+
+
+---
+
+## PUMS data and the tidyverse
+
+```{r ms-pums, results = 'hide'}
+ms_pums <- get_pums(
+  variables = c("PUMA", "SEX", "AGEP", "SCHL"),
+  state = "MS",
+  survey = "acs5",
+  year = 2019,
+  recode = TRUE
+)
+
+ms_age_sex <- ms_pums %>%
+  count(SEX_label, AGEP, wt = PWGTP) 
+```
+
+---
+
+```{r ms-count}
+ms_age_sex
+```
+
+
+
+---
+
+## Group-wise data tabulation
+
+```{r ms-summary}
+ms_pums_summary <- ms_pums %>% 
+  mutate(ba_above = SCHL %in% c("21", "22", "23", "24")) %>% 
+  group_by(PUMA, SEX_label) %>% 
+  summarize(
+    total_pop = sum(PWGTP),
+    mean_age = weighted.mean(AGEP, PWGTP),
+    ba_above = sum(PWGTP[ba_above == TRUE & AGEP >= 25]),
+    ba_above_pct = 100 * (ba_above / sum(PWGTP[AGEP >= 25]))
+  )
+```
+
+---
+
+```{r show-ms-summary}
+ms_pums_summary
+```
+
+
+---
+
+## Advanced example: mapping PUMS data
+
+* Use the tigris package to obtain PUMA geometries and join data based on a common identifier for mapping
+
+```{r join-ms-data}
+library(tigris)
+options(tigris_use_cache = TRUE)
+
+ms_pumas <- pumas("MS", cb = TRUE)
+
+joined_pumas <- ms_pumas %>%
+  left_join(ms_pums_summary, by = c("PUMACE10" = "PUMA")) %>%
+  filter(SEX_label == "Female")
+```
+
+---
+
+.pull-left[
+
+```{r ms-pums-map}
+ms_map <- tm_shape(joined_pumas) + 
+  tm_polygons(col = "ba_above_pct", 
+              palette = "Greens",
+              title = "% of women with\ncollege degree") + 
+  tm_layout(legend.outside = TRUE,
+            legend.outside.position = "right")
+```
+
+]
+
+.pull-right[
+
+```{r show-ms-map}
+ms_map
+```
+
+]
+
+
+
+---
+class: middle, center, inverse
+
+## Calculating errors around tabulated estimates
+
+---
+
+## Survey design and the ACS PUMS
+
+* As we covered in the first workshop, the American Community Survey is based on a _sample_ of the US population and in turn subject to sampling error
+
+* The complex sample design of the ACS further requires appropriate specification when fitting statistical models using PUMS data
+
+* tidycensus, with help from the survey/srvyr packages, includes tools to assist with these tasks
+
+---
+
+## Getting replicate weights
+
+.pull-left[
+
+* The Census Bureau publishes 80 "replicate weights" that can be used to calculate standard errors around tabulated estimates from microdata
+
+* The `rep_weights` parameter in `get_pums()` makes it easier for users to retrieve all of these variables without having to request all 80 directly.  Choose `rep_weights = "person"` for person-weights or `"household"` for household weights
+
+]
+
+.pull-right[
+
+```{r rep-weights, eval = FALSE}
+ms_pums_replicate <- get_pums(
+  variables = c("PUMA", "SEX", "AGEP", "SCHL"),
+  state = "MS",
+  survey = "acs5",
+  year = 2019,
+  recode = TRUE,
+  rep_weights = "person"
+)
+```
+
+]
+
+---
+
+```{r read-rep-weights, echo = FALSE}
+ms_pums_replicate <- read_rds("microdata/data/ms_pums_replicate.rds")
+```
+
+```{r show-rep-weights}
+ms_pums_replicate
+```
+
+---
+
+## Creating a `survey` object
+
+.pull-left[
+
+* The __survey__ package is the standard for handling complex survey samples in R
+
+* The more recent __srvyr__ package wraps __survey__ to allow the use of tidyverse functions on survey objects
+
+* tidycensus includes a function, `to_survey()`, to convert ACS microdata to survey/srvyr objects
+
+]
+
+.pull-right[
+
+```{r svy-object}
+library(survey)
+library(srvyr)
+
+ms_pums_svy <- ms_pums_replicate %>%
+  to_survey(type = "person", 
+            design = "rep_weights")
+
+class(ms_pums_svy)
+```
+
+]
+
+---
+
+## Calculating estimates and errors with __srvyr__
+
+* srvyr's `survey_*()` family of functions automatically calculates standard errors around tabulated estimates for you 
+
+```{r svy-count}
+ms_pums_svy %>% 
+  survey_count(PUMA, SEX_label)
+```
+
+
+---
+
+## Complex tabulations with __srvyr__
+
+```{r svy-summary}
+ms_svy_summary <- ms_pums_svy %>% 
+  mutate(ba_above = SCHL %in% c("21", "22", "23", "24")) %>% 
+  filter(AGEP >= 25) %>% 
+  group_by(PUMA, SEX_label) %>% 
+  summarize(
+    age_25_up = survey_total(vartype = "se"),
+    ba_above_n = survey_total(ba_above, vartype = "se"),
+    ba_above_prop = survey_mean(ba_above, vartype = "se")
+    )
+
+glimpse(ms_svy_summary)
+```
+
+---
+
+## Converting standard errors to MOEs
+
+* To convert standard errors to the familiar margins of error at a 90 percent confidence level, multiply them by 1.645
+
+```{r svy-plot, eval = FALSE}
+ms_svy_summary_moe <- ms_svy_summary %>%
+  mutate(ba_above_prop_moe = ba_above_prop_se * 1.645) %>%
+  filter(SEX_label == "Female")
+
+ggplot(ms_svy_summary_moe, aes(x = ba_above_prop, y = reorder(PUMA, ba_above_prop))) +
+  geom_errorbarh(aes(xmin = ba_above_prop - ba_above_prop_moe, 
+                     xmax = ba_above_prop + ba_above_prop_moe)) +
+  geom_point(size = 3, color = "navy") +
+  labs(title = "Percent of women age 25+ with 4-year college degree",
+       subtitle = "PUMAs in Missisippi.  Error bars represent margin of error at 90 percent confidence level.",
+       x = "2015-2019 ACS estimate (from PUMS data)",
+       y = "") +
+  scale_x_continuous(labels = scales::percent) + 
+  theme_grey(base_size = 14)
+```
+
+---
+
+<img src=img/errorbars.png style="width: 800px">
+
+---
+class: middle, center, inverse
+
+## Advanced example: modeling with PUMS data
+
+---
+
+## Data setup
+
+* Question (adapted from the tidycensus docs by Matt Herman): what is the relationship between wages/class of worker and commute times in Rhode Island?
+
+```{r ri-data, results = 'hide'}
+ri_pums_to_model <- get_pums(
+  variables = c("PUMA", "WAGP", "JWMNP", "JWTRNS", "COW", "ESR"),
+  state = "RI",
+  survey = "acs5",
+  year = 2019
+  )
+```
+
+---
+
+## Data preparation
+
+.pull-left[
+
+* As PUMS data have a _complex sample design_, models fit must account for its data structure where observations are clustered within primary sampling units (households) and strata (PUMAs)
+
+* Use `to_survey(design = "cluster")` to handle this in datasets without replicate weights
+
+* For analysis of subpopulations, `srvyr::filter()` works like `survey::subset()` for appropriate standard error estimation
+
+]
+
+.pull-right[
+
+```{r ri-filter}
+ri_model_sd <- ri_pums_to_model %>% 
+  mutate(
+    emp_type = case_when(
+      COW %in% c("1", "2")      ~ "private",
+      COW %in% c("3", "4", "5") ~ "public",
+      TRUE                      ~ "self"
+      )
+    ) %>%
+  to_survey(design = "cluster") %>%
+  filter(
+    ESR == 1,   # civilian employed
+    JWTRNS != 11, # does not work at home
+    WAGP > 0,   # earned wages last year
+    JWMNP > 0   # commute more than zero min
+  ) 
+```
+
+]
+
+---
+
+## Fitting a model
+
+* The family of modeling functions in the __survey__ package should be used for modeling data in survey design objects, e.g. `survey::svyglm()`
+
+```{r ri-model}
+model <- survey::svyglm(log(JWMNP) ~ log(WAGP) + emp_type + PUMA, 
+                        design = ri_model_sd)
+```
+
+
+---
+
+## Evaluating the model
+
+```{r ri-model-summary}
+summary(model)
+```
+
+---
+
+## Part 2 exercises
+
+* Using the dataset you acquired from the exercises in Part 1 (or the example Wyoming dataset), tabulate a group-wise summary using the PWGTP column and dplyr functions as you've learned in this section.  
+
+* Advanced follow-up: using `get_acs()`, attempt to acquire the same aggregated data from the ACS.  Compare your tabulated estimate with the ACS estimate.
+
+* Second advanced follow-up: request the same data as before, but this time with replicate weights.  Calculate the margin of error as you've learned in this section - and if you have time, compare with the posted ACS margin of error!  
+
+---
+class: middle, center, inverse
+
+## International Census data resources in R
+
+---
+
+## International Census data
+
+* In the workshops to this point, we've focused on United States Census data.  Demographic data and Censuses are international, however, and so are R resources!
+
+* Options for non-US demographic data are widespread in R, and include: 
+
+--
+
+  - Global data from the US Census Bureau's International Data Base, and 
+  
+--
+
+  - Country-specific Census data packages from around the world.  We'll review a sampling in a moment!
+
+---
+
+## The US Census International Data Base
+
+* The US Census Bureau International Database includes both historical data on demographic components (population, fertility, mortality, migration) and population projections to 2100
+
+* idbr: my R package to query data from the IDB API.  Not as smooth as tidycensus, but it works!
+
+* Functions: `idb1()` for the 1-year API and `idb5()` for the 5-year API (a bit of a misnomer, as it includes a wide range of yearly demographic variables)
+
+---
+
+## International data with idbr
+
+* Example: how has life expectancy at birth changed in Southeast Asia?
+
+```{r idbr-1, eval = FALSE}
+library(idbr)
+library(tidyverse)
+
+se_asia_lex <- idb5(
+  country = c("Laos", "Vietnam", "Cambodia", "Thailand"),
+  year = 1995:2021,
+  variable = "E0",
+  country_name = TRUE
+)
+
+ggplot(se_asia_lex, aes(x = time, y = E0, color = NAME)) + 
+  theme_minimal(base_size = 18) + 
+  geom_line(size = 2) + 
+  labs(title = "Change in life expectancy, 1995-2021",
+       y = "Life expectancy at birth",
+       x = "Year")
+```
+
+---
+
+<img src=img/lex_plot.png style="width: 850px"> 
+
+---
+
+## International data with idbr
+
+.pull-left[
+
+* Example: what 10 countries have the highest total fertility rates in 2021?
+
+```{r idbr-2, eval = FALSE}
+top_tfr <- idb5(
+  country = "all",
+  year = 2021,
+  variable = "TFR",
+  country_name = TRUE
+) %>%
+  slice_max(TFR, n = 10)
+```
+
+]
+
+.pull-right[
+
+```{r show-tfr, eval = FALSE}
+top_tfr
+```
+
+```{r bypass-idbr-call, echo = FALSE}
+structure(list(TFR = c(6.9097, 5.8955, 5.7, 5.63, 5.57, 5.4716, 
+5.448, 5.4267, 5.4119, 5.1034), NAME = c("Niger", "Angola", "Congo (Kinshasa)", 
+"Mali", "Chad", "Benin", "Uganda", "South Sudan", "Somalia", 
+"Burundi"), FIPS = c("NG", "AO", "CG", "ML", "CD", "BN", "UG", 
+"OD", "SO", "BY"), time = c(2021, 2021, 2021, 2021, 2021, 2021, 
+2021, 2021, 2021, 2021)), row.names = c(NA, -10L), class = c("tbl_df", 
+"tbl", "data.frame"))
+```
+
+]
+
+---
+
+## International population pyramids
+
+<img src=img/nigeria_pyramid-1.gif style="width: 500px">
+
+.footnote[See more at [Ari Lamstein's blog](https://arilamstein.com/blog/2016/06/06/idbr-access-us-census-bureau-international-data-base-r/)]
+
+---
+
+## Canada: cancensus
+
+.pull-left[
+
+<img src="https://raw.githubusercontent.com/mountainMath/cancensus/master/images/cancensus-sticker.png" style="width: 400px">
+
+]
+
+.pull-right[
+
+* [The cancensus R package](https://mountainmath.github.io/cancensus/index.html) grants comprehensive access to Canadian Census data through the [CensusMapper APIs](https://censusmapper.ca/)
+
+```{r cancensus-1}
+library(cancensus)
+library(tidyverse)
+library(sf)
+options(cancensus.api_key = Sys.getenv("CANCENSUS_API_KEY"))
+
+# View(list_census_vectors("CA16"))
+
+```
+
+]
+
+
+---
+
+## Canada: cancensus
+
+* cancensus allows for different datasets, regions, and geographic levels to be queried 
+
+* Simple feature geometry is available if requested 
+
+```{r montreal-english, eval = FALSE}
+montreal_english <- get_census(
+  dataset = "CA16",
+  regions = list(CMA = "24462"),
+  vectors = "v_CA16_1364",
+  level = "CT",
+  geo_format = "sf",
+  labels = "short"
+) 
+```
+
+---
+
+## Mapping Canadian Census data
+
+```{r map-montreal-english, eval = FALSE}
+tmap_mode("view")
+
+montreal_pct <- montreal_english %>%
+  mutate(pct_english = 100 * (v_CA16_1364 / Population))
+
+tm_shape(montreal_pct) + 
+  tm_polygons(col = "pct_english", alpha = 0.5, palette = "viridis",
+              style = "jenks", n = 7, title = "Percent speaking<br/>English at home")
+```
+
+---
+
+<img src=img/montreal.png style="width: 800px">
+
+---
+
+## Mexico: mxmaps/inegiR
+
+* Used together, the [mxmaps](https://www.diegovalle.net/mxmaps/) and [inegiR](https://github.com/Eflores89/inegiR) R packages allow for geographic analysis and visualization of Mexican Census data
+
+* Get an API token at http://www3.inegi.org.mx//sistemas/api/indicadores/v1/tokenVerify.aspx
+
+---
+
+## Mexico: mxmaps/inegiR
+
+```{r mxmaps, eval = FALSE}
+# remotes::install_github("diegovalle/mxmaps")
+library(mxmaps)
+token_inegi <- Sys.getenv("INEGI_API_KEY")
+
+state_regions <- df_mxstate_2020$region
+choropleth_inegi(token_inegi, state_regions, 
+                 indicator = "3104003001",
+                 legend = "%",
+                 title = "Percentage born outside\nstate of residence") + 
+  theme_void(base_size = 18)
+```
+
+
+---
+
+<img src=img/mx_map.png style="width: 850px">
+
+---
+
+.pull-left[
+
+```{r inegir}
+library(inegiR)
+token_inegi <- Sys.getenv("INEGI_API_KEY")
+state_regions <- mxmaps::df_mxstate_2020$region
+
+pct_migrants <- map_df(state_regions, ~{
+  inegi_series(series_id = "3104003001", 
+               token = token_inegi, 
+               geography = .x,
+               database = "BISE") %>%
+    mutate(state_code = .x)
+})
+  
+```
+
+]
+
+.pull-right[
+
+```{r show-inegir}
+head(pct_migrants)
+```
+
+]
+
+
+
+---
+
+## Brazil: geobr
+
+.pull-left[
+
+<img src="https://raw.githubusercontent.com/ipeaGIT/geobr/master/r-package/man/figures/geobr_logo_b.png" style="width: 400px">
+
+]
+
+.pull-right[
+
+* Package from [IPEA](https://www.ipea.gov.br/portal/) that helps you load shapes for many Brazilian geographies, including Census boundaries
+
+```{r geobr, results = "hide", eval = FALSE}
+library(geobr)
+
+rj_tracts <- read_census_tract(code_tract = 3304557)
+```
+
+]
+
+---
+
+```{r show-geobr, eval = FALSE}
+mapview::mapview(rj_tracts)
+```
+<img src=img/rj_tracts.png style="width: 800px">
+
+---
+
+## Kenya: RKenyaCensus
+
+.pull-left[
+
+* The [rKenyaCensus package](https://github.com/Shelmith-Kariuki/rKenyaCensus) by [Shel Kariuki](https://shelkariuki.netlify.app/) makes indicators from the 2019 Kenya Population and Housing Census
+
+* Tables install directly with the package and can be accessed by name
+
+]
+
+.pull-right[
+
+```{r kenya-1}
+# remotes::install_github("Shelmith-Kariuki/rKenyaCensus")
+library(rKenyaCensus)
+library(tidyverse)
+
+religion <- V4_T2.30 %>%
+  filter(County != "KENYA") %>%
+  mutate(county_title = str_to_title(County), 
+         prop_islam = Islam / Total)
+```
+
+]
+
+
+---
+
+## Visualizing Kenyan Census data
+
+```{r plot-kenya, eval = FALSE}
+ggplot(religion, aes(x = prop_islam, y = reorder(county_title, prop_islam))) + 
+  geom_col(fill = "navy", alpha = 0.6) + 
+  theme_minimal(base_size = 12.5) + 
+  scale_x_continuous(labels = scales::percent) + 
+  labs(title = "Percent Muslim by County in Kenya",
+       subtitle = "2019 Kenyan Census", 
+       x = "",
+       y = "",
+       caption = "Data source: rKenyaCensus R package")
+```
+
+---
+
+<img src=img/kenya_plot.png style="width: 900px">
+
+---
+
+
+## Mapping Kenyan Census data
+
+* The rKenyaCensus package includes county boundaries to facilitate mapping of the various indicators in the Census
+
+```{r map-kenya, eval = FALSE}
+kenya_islam_map <- KenyaCounties_SHP %>%
+  sf::st_as_sf() %>%
+  mutate(County = str_remove(County, " CITY")) %>%
+  left_join(religion, by = "County") %>%
+  mutate(pct_islam = 100 * prop_islam)
+
+tm_shape(kenya_islam_map) + 
+  tm_polygons(col = "pct_islam",
+              palette = "viridis", 
+              style = "jenks",
+              n = 7, 
+              title = "% Muslim",
+              alpha = 0.6)
+```
+
+
+---
+
+<img src=img/kenya_map.png style="width: 700px">
+
+---
+
+## Other data resources
+
+* Many other international data resources in R exist, e.g. [nomisr](https://github.com/ropensci/nomisr) for UK data and [afrimapr](https://afrimapr.github.io/afrimapr.website/) for Africa-wide datasets
+
+* The [IPUMS International project](https://international.ipums.org/international/) has microdata for over 100 countries; use IPUMS data with the [ipumsr R package](https://github.com/mnpopcenter/ipumsr)
+
+---
+
+## Part 3 exercises
+
+* Choose a country from the examples above and explore further.  Try making a map or a chart for a new variable for a country of your choice!  
+
+---
+class: middle, center, inverse
+
+## Thank you!

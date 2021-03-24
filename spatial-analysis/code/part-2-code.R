@@ -107,6 +107,7 @@ st_crs(fl_counties)
 
 ## ----suggest-crs---------------------------------------------------------------------------------------
 library(crsuggest)
+library(tidyverse)
 
 fl_crs <- suggest_crs(fl_counties)
 
@@ -122,6 +123,10 @@ head(fl_projected)
 ## ----tidycensus-geometry-------------------------------------------------------------------------------
 library(tidycensus)
 options(tigris_use_cache = TRUE)
+
+dc_income1 <- get_acs(geography = "tract", 
+                     variables = c(hhincome = "B19013_001"), 
+                     state = "DC")
 
 dc_income <- get_acs(geography = "tract", 
                      variables = c(hhincome = "B19013_001"), 
@@ -141,8 +146,8 @@ plot(dc_income["estimate"])
 ## ----geom-sf-------------------------------------------------------------------------------------------
 library(tidyverse)
 
-dc_map <- ggplot(dc_income, aes(fill = estimate)) + 
-  geom_sf()
+dc_map <- ggplot() + 
+  geom_sf(data = dc_income, aes(fill = estimate, geometry = geom))
 
 
 ## ----plot-geom-sf--------------------------------------------------------------------------------------
@@ -279,6 +284,10 @@ tm_shape(us_median_age) +
 library(mapview)
 
 mapview(dc_income, zcol = "estimate")
+
+m1 <- mapview(dc_income, zcol = "estimate")
+
+htmlwidgets::saveWidget(m1, "dc_income_map.html")
 
 
 ## ----write-shp, eval = FALSE---------------------------------------------------------------------------

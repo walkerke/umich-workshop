@@ -1227,6 +1227,3 @@ class: middle, center, inverse
 
 
 
-
-
-
