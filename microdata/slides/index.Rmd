@@ -71,9 +71,29 @@ style_xaringan(
 * Hour 3: Bonus: international Census data resources in R
 
 ---
+
+## Optional prep
+
+To run _all_ the examples in Part 3, you'll need API keys
+
+* Canada: https://censusmapper.ca/users/sign_up
+
+* Mexico: http://www3.inegi.org.mx//sistemas/api/indicadores/v1/tokenVerify.aspx
+
+---
 class: middle, center, inverse
 
 ## Part 1: Using ACS microdata with tidycensus
+
+---
+
+## tidycensus overview and review
+
+* tidycensus: an R package to retrieve demographic data, optionally with geographic information, from the US Census Bureau's decennial Census, American Community Survey, and Population Estimates APIs
+
+* 2020: new functionality to retrieve ACS _microdata_ from the API
+
+* Coming soon: migration flows data!
 
 ---
 
