@@ -231,7 +231,8 @@ ri_pums_to_model <- get_pums(
   variables = c("PUMA", "WAGP", "JWMNP", "JWTRNS", "COW", "ESR"),
   state = "RI",
   survey = "acs5",
-  year = 2019
+  year = 2019,
+  rep_weights = "person"
   )
 
 
@@ -244,7 +245,7 @@ ri_model_sd <- ri_pums_to_model %>%
       TRUE                      ~ "self"
       )
     ) %>%
-  to_survey(design = "cluster") %>%
+  to_survey() %>%
   filter(
     ESR == 1,   # civilian employed
     JWTRNS != 11, # does not work at home
@@ -274,7 +275,7 @@ se_asia_lex <- idb5(
 )
 
 ggplot(se_asia_lex, aes(x = time, y = E0, color = NAME)) +
-  theme_minimal(base_size = 18) +
+  theme_minimal(base_size = 14) +
   geom_line(size = 2) +
   labs(title = "Change in life expectancy, 1995-2021",
        y = "Life expectancy at birth",
@@ -383,7 +384,7 @@ religion <- V4_T2.30 %>%
 ## ----plot-kenya, eval = FALSE---------------------------------------------------------------
 ggplot(religion, aes(x = prop_islam, y = reorder(county_title, prop_islam))) +
   geom_col(fill = "navy", alpha = 0.6) +
-  theme_minimal(base_size = 12.5) +
+  theme_minimal(base_size = 10) +
   scale_x_continuous(labels = scales::percent) +
   labs(title = "Percent Muslim by County in Kenya",
        subtitle = "2019 Kenyan Census",

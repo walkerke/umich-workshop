@@ -634,7 +634,8 @@ ri_pums_to_model <- get_pums(
   variables = c("PUMA", "WAGP", "JWMNP", "JWTRNS", "COW", "ESR"),
   state = "RI",
   survey = "acs5",
-  year = 2019
+  year = 2019,
+  rep_weights = "person"
   )
 ```
 
@@ -644,9 +645,7 @@ ri_pums_to_model <- get_pums(
 
 .pull-left[
 
-* As PUMS data have a _complex sample design_, models fit must account for its data structure where observations are clustered within primary sampling units (households) and strata (PUMAs)
-
-* Use `to_survey(design = "cluster")` to handle this in datasets without replicate weights
+* Appropriate estimation of standard errors requires accounting for the complex sample design of the PUMS and using replicate weights
 
 * For analysis of subpopulations, `srvyr::filter()` works like `survey::subset()` for appropriate standard error estimation
 
@@ -663,7 +662,7 @@ ri_model_sd <- ri_pums_to_model %>%
       TRUE                      ~ "self"
       )
     ) %>%
-  to_survey(design = "cluster") %>%
+  to_survey() %>%
   filter(
     ESR == 1,   # civilian employed
     JWTRNS != 11, # does not work at home

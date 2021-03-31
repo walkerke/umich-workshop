@@ -136,9 +136,9 @@ utah_pyramid
 ## --------------------------------------------------------------------------------
 library(plotly)
 
-ggp <- ggplotly(utah_pyramid)
+ggp <- ggplotly(utah_pyramid) 
 
-htmlwidgets::saveWidget(ggp, "census-data-in-r/slides/img/utah_pyramid.html")
+htmlwidgets::saveWidget(ggp, "census-data-in-r/slides/img/utah_pyramid2.html")
 
 
 ## --------------------------------------------------------------------------------
